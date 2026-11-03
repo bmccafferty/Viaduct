@@ -421,8 +421,14 @@ def remove_note_from_index(conn, rel_path: str):
 def full_reindex():
     conn = get_db()
     with conn:
+        conn.execute("DELETE FROM notes")
+        conn.execute("DELETE FROM notes_fts")
+        conn.execute("DELETE FROM backlinks")
+        conn.execute("DELETE FROM tasks")
+        conn.execute("DELETE FROM links")
+        conn.execute("DELETE FROM tags")
         for rel_path_obj in VAULT_DIR.rglob("*.md"):
-            if any(p.startswith(".") for p in rel_path_obj.parts):
+            if any(p.startswith(".") or p.startswith("_") for p in rel_path_obj.parts):
                 continue
             rel_path = rel_path_obj.relative_to(VAULT_DIR).as_posix()
             index_single_note(conn, rel_path)
@@ -537,8 +543,11 @@ tags: [daily-log, cloud]
 
 
 def seed_starter_vault_if_empty():
-    existing = list(VAULT_DIR.rglob("*.md"))
+    if (INDEX_DIR / ".vault_initialized").exists():
+        return
+    existing = [p for p in VAULT_DIR.rglob("*.md") if not any(part.startswith("_") or part.startswith(".") for part in p.parts)]
     if existing:
+        (INDEX_DIR / ".vault_initialized").write_text("1", encoding="utf-8")
         return
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -847,6 +856,7 @@ Chosen option: **Option A**, because...
         p = VAULT_DIR / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content, encoding="utf-8")
+    (INDEX_DIR / ".vault_initialized").write_text("1", encoding="utf-8")
 
 
 class ViaductHandler(SimpleHTTPRequestHandler):
@@ -934,6 +944,8 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.handle_add_link(body)
         elif path == "/api/links/pin":
             return self.handle_pin_link(body)
+        elif path == "/api/vault/archive-demo":
+            return self.handle_archive_demo()
         elif path == "/api/reindex":
             full_reindex()
             return self.send_json({"ok": True})
@@ -1475,6 +1487,27 @@ tags: [notes]
         notes = [dict(r) for r in conn.execute("SELECT * FROM notes")]
         conn.close()
         return self.send_json({"exported_at": datetime.now().isoformat(), "notes": notes})
+
+    def handle_archive_demo(self):
+        archive_root = VAULT_DIR / "_demo_archive"
+        archive_root.mkdir(parents=True, exist_ok=True)
+        moved = 0
+        for p in list(VAULT_DIR.rglob("*.md")):
+            rel_parts = p.relative_to(VAULT_DIR).parts
+            if any(part.startswith("_") or part.startswith(".") for part in rel_parts):
+                continue
+            if rel_parts[0] == "templates":
+                continue
+            dest = archive_root / p.relative_to(VAULT_DIR)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            p.rename(dest)
+            moved += 1
+
+        (INDEX_DIR / ".vault_initialized").write_text("1", encoding="utf-8")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        create_daily_note_if_missing(today_str)
+        full_reindex()
+        return self.send_json({"ok": True, "moved": moved, "today": today_str})
 
     def handle_get_report(self, qs: dict):
         today_dt = datetime.now()

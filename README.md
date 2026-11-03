@@ -66,6 +66,18 @@ Then open **http://127.0.0.1:8420** in your browser.
 VIADUCT_PORT=9000 python3 server.py
 ```
 
+### 3. Auto-Start in the Background (macOS + Windows WSL / Linux)
+So you never have to manually open a terminal and run `./start.sh`, run the cross-platform service installer once:
+```bash
+./install-service.sh
+```
+- **On macOS**: Installs and loads a `LaunchAgent` (`~/Library/LaunchAgents/scot.bdm.viaduct.plist`) that starts Viaduct automatically on login and keeps it alive.
+- **On Windows WSL / Linux**: Configures a `systemd --user` service (`~/.config/systemd/user/viaduct.service`) plus a lightweight WSL shell login hook so Viaduct is always listening on `http://localhost:8420` from your Windows or Mac browser.
+- To remove the background service at any time: `./uninstall-service.sh`.
+
+### 4. Starting Fresh (Archiving the Demo Vault)
+Viaduct ships with sample notes so you can explore backlinks, tasks, and weekly digests right away. When you are ready to start logging your own work, click **`Archive Demo`** in the bottom-left sidebar footer—all sample notes are safely moved to `vault/_demo_archive/` (ignored by the search/task index) and a clean Daily Log is created for today.
+
 ---
 
 ## Core Features & Workflow

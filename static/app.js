@@ -1509,6 +1509,24 @@ function bindEvents() {
     await refreshBootstrap();
   });
 
+  const archiveDemoBtn = document.getElementById("btn-archive-demo");
+  if (archiveDemoBtn) {
+    archiveDemoBtn.addEventListener("click", async () => {
+      if (
+        !confirm(
+          "Move current notes to vault/_demo_archive/ and start with a clean Daily Log for today? (Your templates/ folder will be kept, and nothing is deleted.)"
+        )
+      ) {
+        return;
+      }
+      const res = await apiPost("/api/vault/archive-demo", {});
+      if (res.ok) {
+        await refreshBootstrap();
+        await openDailyNote(res.today || state.today);
+      }
+    });
+  }
+
   window.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
