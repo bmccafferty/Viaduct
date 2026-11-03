@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIADUCT // Cloud Lead Knowledge & Operations Vault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- LEFT NAVIGATION SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M3 17h18M3 11h18M5 17v4M12 17v4M19 17v4M6 11c0-3 2.5-5 6-5s6 2 6 5" />
+          </svg>
+          <div class="brand-titles">
+            <span class="brand-name">VIADUCT</span>
+            <span class="brand-sub">LOCAL MD ENGINE v2.4</span>
+          </div>
+        </div>
+        <button class="icon-btn" id="btn-cmd-palette" title="Command Palette & Instant FTS5 Search (⌘K)">
+          <span class="kbd-hint">⌘K</span>
+        </button>
+      </div>
+
+      <!-- QUICK SEARCH TRIGGER -->
+      <div class="sidebar-search" id="sidebar-search-trigger">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Full-Text Search Vault...</span>
+        <kbd>⌘K</kbd>
+      </div>
+
+      <!-- PRIMARY WORKSPACE VIEWS -->
+      <nav class="primary-nav">
+        <button class="nav-item active" data-view="daily" id="nav-daily">
+          <div class="nav-item-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Daily Log</span>
+          </div>
+          <span class="nav-badge accent" id="badge-today">TODAY</span>
+        </button>
+
+        <button class="nav-item" data-view="tasks" id="nav-tasks">
+          <div class="nav-item-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"></polyline>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            <span>Central Task Sheet</span>
+          </div>
+          <span class="nav-badge warn" id="badge-tasks">0</span>
+        </button>
+
+        <button class="nav-item" data-view="links" id="nav-links">
+          <div class="nav-item-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span>URL & Link Registry</span>
+          </div>
+          <span class="nav-badge info" id="badge-links">0</span>
+        </button>
+
+        <button class="nav-item" data-view="graph" id="nav-graph">
+          <div class="nav-item-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            <span>Topology & Link Graph</span>
+          </div>
+          <span class="nav-badge" id="badge-notes">0</span>
+        </button>
+      </nav>
+
+      <!-- VAULT EXPLORER SECTIONS -->
+      <div class="vault-explorer">
+        <div class="section-header">
+          <span>PROJECTS</span>
+          <button class="mini-add-btn" data-create-folder="projects" title="New Project Note">+ NEW</button>
+        </div>
+        <div class="note-tree" id="tree-projects"></div>
+
+        <div class="section-header">
+          <span>TECH KB & RUNBOOKS</span>
+          <button class="mini-add-btn" data-create-folder="kb" title="New Tech Doc / Runbook">+ NEW</button>
+        </div>
+        <div class="note-tree" id="tree-kb"></div>
+
+        <div class="section-header">
+          <span>DAILY LOG ARCHIVE</span>
+          <button class="mini-add-btn" id="btn-jump-today" title="Jump to Today">TODAY</button>
+        </div>
+        <div class="note-tree" id="tree-daily"></div>
+
+        <div class="section-header">
+          <span>TEMPLATES</span>
+          <button class="mini-add-btn" data-create-folder="templates" title="New Template">+ NEW</button>
+        </div>
+        <div class="note-tree" id="tree-templates"></div>
+
+        <div class="section-header">
+          <span>TAGS INDEX</span>
+        </div>
+        <div class="sidebar-tags" id="sidebar-tags"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="vault-status">
+          <span class="status-dot online"></span>
+          <span id="vault-status-text" title="All notes saved as local .md files">Local Vault Synced</span>
+        </div>
+        <button class="icon-btn" id="btn-reindex" title="Force SQLite FTS5 Re-index">↻</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CENTER STAGE -->
+    <main class="main-stage">
+      <!-- TOP UTILITY BAR -->
+      <header class="topbar">
+        <div class="topbar-left" id="breadcrumbs">
+          <span class="crumb-folder">vault</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-title" id="topbar-title">Loading...</span>
+          <span class="save-indicator" id="save-indicator">Saved to .md</span>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Editor mode switchers (visible when viewing a note/daily) -->
+          <div class="mode-group" id="editor-mode-group">
+            <button class="mode-btn active" data-mode="split" title="Live Split: Outliner Editor + Rendered Tech Doc">Split View</button>
+            <button class="mode-btn" data-mode="edit" title="Focused Markdown & Outliner Editor">Editor</button>
+            <button class="mode-btn" data-mode="preview" title="Clean Technical Doc Reader">Reader</button>
+          </div>
+
+          <button class="action-btn" id="btn-quick-task" title="Quickly append a task to Today's Daily Note">
+            + Quick Task
+          </button>
+          <button class="action-btn" id="btn-quick-bookmark" title="Capture URL Bookmark to Today's Note & Link Registry">
+            + Capture URL
+          </button>
+          <button class="action-btn primary" id="btn-new-note" title="Create New Note (⌘N)">
+            + New Note
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: NOTE / DAILY LOG WORKSPACE -->
+      <section class="workspace-view active" id="view-editor">
+        <!-- Daily Log Timeline Bar (Shown when viewing a Daily Note) -->
+        <div class="daily-banner hidden" id="daily-banner">
+          <div class="daily-nav-controls">
+            <button class="btn-sm" id="btn-prev-day" title="Previous Day">← Prev Day</button>
+            <input type="date" id="daily-date-picker" class="date-input" />
+            <button class="btn-sm" id="btn-next-day" title="Next Day">Next Day →</button>
+            <button class="btn-sm accent" id="btn-today-day">Jump to Today</button>
+          </div>
+          <div class="daily-quick-actions">
+            <button class="btn-sm warn hidden" id="btn-carryover" title="Roll unfinished tasks from previous daily logs into today">
+              ⟳ Roll Over <span id="carryover-count">0</span> Unfinished Tasks
+            </button>
+            <button class="btn-sm" id="btn-insert-timestamp" title="Insert timestamped work log bullet at cursor">
+              ⏱ + Timestamp Log
+            </button>
+            <button class="btn-sm" id="btn-insert-task-line" title="Insert - [ ] task checkbox">
+              ☑ + Task Bullet
+            </button>
+            <button class="btn-sm" id="btn-insert-code" title="Insert fenced code block">
+              &lt;/&gt; Code Block
+            </button>
+          </div>
+        </div>
+
+        <!-- Project / KB Metadata Bar (Shown when note has frontmatter metadata) -->
+        <div class="meta-banner" id="meta-banner"></div>
+
+        <!-- Editor & Preview Split Container -->
+        <div class="editor-split-container mode-split" id="editor-split-container">
+          <!-- Left: Markdown & Outliner Editor -->
+          <div class="editor-pane">
+            <div class="pane-Subheader">
+              <span>MARKDOWN & OUTLINER SOURCE</span>
+              <span class="pane-hint">Tab/Shift+Tab to indent • `[[` to link note • `- [ ]` for tracked task</span>
+            </div>
+            <div class="textarea-wrapper">
+              <textarea id="note-editor" spellcheck="false" placeholder="Write Markdown, outline bullets, - [ ] tasks, [[WikiLinks]], and URLs..."></textarea>
+              <!-- Floating [[WikiLink]] Autocomplete Popup -->
+              <div id="wikilink-popup" class="autocomplete-popup hidden"></div>
+            </div>
+          </div>
+
+          <!-- Center/Right: Interactive Live Rendered Preview -->
+          <div class="preview-pane">
+            <div class="pane-Subheader">
+              <span>INTERACTIVE TECH DOC & OUTLINER VIEW</span>
+              <span class="pane-hint" id="word-count-label">0 words</span>
+            </div>
+            <div id="note-preview" class="markdown-body"></div>
+          </div>
+
+          <!-- Far Right: Context Inspector (Backlinks, Outgoing Links, Local Tasks & URLs) -->
+          <aside class="inspector-pane" id="inspector-pane">
+            <div class="inspector-section">
+              <div class="inspector-title">
+                <span>⇄ INCOMING BACKLINKS</span>
+                <span class="pill-count" id="count-backlinks">0</span>
+              </div>
+              <div id="list-backlinks" class="inspector-list"></div>
+            </div>
+
+            <div class="inspector-section">
+              <div class="inspector-title">
+                <span>◌ UNLINKED MENTIONS</span>
+                <span class="pill-count" id="count-unlinked">0</span>
+              </div>
+              <div id="list-unlinked" class="inspector-list"></div>
+            </div>
+
+            <div class="inspector-section">
+              <div class="inspector-title">
+                <span>☑ TASKS IN THIS NOTE</span>
+                <span class="pill-count" id="count-note-tasks">0</span>
+              </div>
+              <div id="list-note-tasks" class="inspector-list"></div>
+            </div>
+
+            <div class="inspector-section">
+              <div class="inspector-title">
+                <span>🔗 CAPTURED URLS IN NOTE</span>
+                <span class="pill-count" id="count-note-links">0</span>
+              </div>
+              <div id="list-note-links" class="inspector-list"></div>
+            </div>
+
+            <div class="inspector-section">
+              <div class="inspector-title">
+                <span>DOCUMENT ACTIONS</span>
+              </div>
+              <div class="inspector-actions">
+                <button class="btn-sm danger" id="btn-delete-note">Delete Note (.md)</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- VIEW 2: CENTRALIZED CROSS-NOTE TASK TRACKER SHEET -->
+      <section class="workspace-view" id="view-tasks">
+        <div class="dashboard-container">
+          <div class="dashboard-header">
+            <div>
+              <h1>Centralized Engineering Task Sheet</h1>
+              <p class="subtitle">
+                Every <code>- [ ]</code>, <code>- [/]</code>, and <code>- [x]</code> across all Daily Logs, Projects, and Runbooks—centrally aggregated with two-way live sync back to the exact Markdown line.
+              </p>
+            </div>
+            <div class="kpi-strip" id="task-kpis"></div>
+          </div>
+
+          <!-- Quick Add Task Bar -->
+          <form class="quick-capture-bar" id="form-central-task">
+            <input type="text" id="input-central-task-text" placeholder="Add new task to Today's Daily Note (supports #tags, [[Project]], !high)..." required />
+            <select id="select-central-task-priority">
+              <option value="normal">Priority: Normal</option>
+              <option value="high">!high (P1)</option>
+              <option value="med">!med (P2)</option>
+              <option value="low">!low (P3)</option>
+            </select>
+            <select id="select-central-task-project">
+              <option value="">Link to Project (Optional)...</option>
+            </select>
+            <input type="date" id="input-central-task-due" />
+            <button type="submit" class="action-btn primary">+ Add to Today's Log</button>
+          </form>
+
+          <!-- Filters Bar -->
+          <div class="filter-bar">
+            <div class="filter-tabs" id="task-status-tabs">
+              <button class="filter-tab active" data-status="open">Open (Todo & Doing)</button>
+              <button class="filter-tab" data-status="doing">In Progress [/]</button>
+              <button class="filter-tab" data-status="done">Completed [x]</button>
+              <button class="filter-tab" data-status="all">All Tasks</button>
+            </div>
+            <div class="filter-controls">
+              <select id="filter-task-folder">
+                <option value="">All Folders (Daily + Projects + KB)</option>
+                <option value="daily">Daily Notes Only</option>
+                <option value="projects">Projects Only</option>
+                <option value="kb">KB / Runbooks Only</option>
+              </select>
+              <select id="filter-task-priority">
+                <option value="">All Priorities</option>
+                <option value="high">High (!high)</option>
+                <option value="med">Medium (!med)</option>
+                <option value="normal">Normal</option>
+              </select>
+              <input type="text" id="filter-task-search" placeholder="Filter tasks by keyword, #tag, or [[project]]..." />
+            </div>
+          </div>
+
+          <!-- Task Sheet Table -->
+          <div class="sheet-table-wrap">
+            <table class="sheet-table">
+              <thead>
+                <tr>
+                  <th width="90">State</th>
+                  <th>Task Description & Context</th>
+                  <th width="95">Priority</th>
+                  <th width="120">Target / Log Date</th>
+                  <th width="220">Source Markdown File</th>
+                </tr>
+              </thead>
+              <tbody id="tasks-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: URL & BOOKMARK REGISTRY -->
+      <section class="workspace-view" id="view-links">
+        <div class="dashboard-container">
+          <div class="dashboard-header">
+            <div>
+              <h1>Technical URL & Bookmark Registry</h1>
+              <p class="subtitle">
+                Every URL and <code>[Title](https://...)</code> mentioned in any Daily Note or Project doc is automatically indexed with domain grouping, context lines, and backlinks to the note where you found it.
+              </p>
+            </div>
+            <div class="kpi-strip" id="link-kpis"></div>
+          </div>
+
+          <!-- Quick Add Bookmark Bar -->
+          <form class="quick-capture-bar" id="form-central-link">
+            <input type="url" id="input-link-url" placeholder="https://kubernetes.io/docs/..." required />
+            <input type="text" id="input-link-title" placeholder="Bookmark Title (e.g. Architecture Reference)" />
+            <input type="text" id="input-link-notes" placeholder="Context note or why this matters..." />
+            <input type="text" id="input-link-tags" placeholder="#cloud #k8s" />
+            <button type="submit" class="action-btn primary">+ Save & Log to Today</button>
+          </form>
+
+          <!-- Category & Domain Filters -->
+          <div class="filter-bar">
+            <div class="filter-tabs" id="link-category-tabs">
+              <button class="filter-tab active" data-cat="">All Links</button>
+              <button class="filter-tab" data-cat="pinned">★ Pinned</button>
+              <button class="filter-tab" data-cat="docs">Tech Docs</button>
+              <button class="filter-tab" data-cat="observability">Observability / Grafana</button>
+              <button class="filter-tab" data-cat="repo">Git / PRs</button>
+              <button class="filter-tab" data-cat="runbook">Runbooks</button>
+              <button class="filter-tab" data-cat="ticket">Tickets / Jira</button>
+            </div>
+            <div class="filter-controls">
+              <select id="filter-link-domain">
+                <option value="">All Domains</option>
+              </select>
+              <input type="text" id="filter-link-search" placeholder="Search URLs, titles, domains, or surrounding note context..." />
+            </div>
+          </div>
+
+          <!-- Links Grid / Sheet -->
+          <div id="links-grid" class="links-grid"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: KNOWLEDGE TOPOLOGY GRAPH -->
+      <section class="workspace-view" id="view-graph">
+        <div class="graph-container">
+          <div class="graph-overlay">
+            <h2>Knowledge & Architecture Link Topology</h2>
+            <p>Interactive force-directed graph of your <code>[[WikiLinks]]</code> connecting Daily Logs, Projects, and Runbooks. Click any node to open the note.</p>
+            <div class="graph-legend">
+              <span><i class="dot daily"></i> Daily Logs</span>
+              <span><i class="dot projects"></i> Projects</span>
+              <span><i class="dot kb"></i> Tech KB / Runbooks</span>
+            </div>
+          </div>
+          <canvas id="graph-canvas"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- COMMAND PALETTE & INSTANT FTS5 SEARCH MODAL (⌘K) -->
+  <div class="modal-backdrop hidden" id="cmd-modal">
+    <div class="cmd-dialog">
+      <div class="cmd-input-row">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="cmd-search-input" placeholder="Search full-text across all Markdown notes, code blocks, #tags, or run a command..." autocomplete="off" />
+        <span class="search-latency" id="search-latency">FTS5 ready</span>
+        <kbd class="esc-hint">ESC</kbd>
+      </div>
+      <div class="cmd-results" id="cmd-results"></div>
+    </div>
+  </div>
+
+  <!-- CREATE NEW NOTE MODAL -->
+  <div class="modal-backdrop hidden" id="new-note-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create New Markdown Note</h3>
+        <button class="icon-btn" id="close-new-note-modal">✕</button>
+      </div>
+      <form id="form-new-note">
+        <label>Note Title</label>
+        <input type="text" id="new-note-title" placeholder="e.g. AKS Nodepool Spot Eviction Policy" required />
+
+        <label>Folder / Category</label>
+        <select id="new-note-folder">
+          <option value="projects">projects/ — Architecture & Project Notes</option>
+          <option value="kb">kb/ — Technical Docs, Runbooks & ADRs</option>
+          <option value="templates">templates/ — Reusable Markdown Templates</option>
+        </select>
+
+        <div class="modal-actions">
+          <button type="button" class="action-btn" id="cancel-new-note">Cancel</button>
+          <button type="submit" class="action-btn primary">Create .md File</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

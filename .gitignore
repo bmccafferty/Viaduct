@@ -1,0 +1,9 @@
+# Local SQLite FTS5 index cache (auto-generated from vault/*.md)
+.viaduct/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# OS metadata
+.DS_Store
