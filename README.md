@@ -13,6 +13,25 @@
 
 ---
 
+## Screenshots
+
+### 1. Daily Log & Outliner (Split Editor + Live Rendered Tech Doc)
+![Daily Log & Outliner](docs/screenshots/daily-log.png)
+
+### 2. Project Architecture Notes & Incoming Backlinks Inspector
+![Project Note & Backlinks](docs/screenshots/project-note.png)
+
+### 3. Centralized Cross-Note Task Sheet (Two-Way `.md` Sync)
+![Centralized Task Sheet](docs/screenshots/task-sheet.png)
+
+### 4. Technical URL & Bookmark Registry
+![URL & Bookmark Registry](docs/screenshots/link-registry.png)
+
+### 5. Knowledge & Architecture Link Topology Graph
+![Knowledge Topology Graph](docs/screenshots/topology-graph.png)
+
+---
+
 ## Quick Start (Download & Run Locally)
 
 Viaduct runs entirely on the **Python 3 standard library** (including built-in `sqlite3` with FTS5) and vanilla HTML/CSS/JS. There are **no `npm` packages, no `pip` dependencies, and no build steps** required.
@@ -83,12 +102,14 @@ Never lose a documentation link, Grafana dashboard, GitHub PR, or incident ticke
 Viaduct/
 ├── server.py          # Zero-dependency Python HTTP + SQLite FTS5 indexing server
 ├── start.sh           # One-command local launcher
+├── docs/
+│   └── screenshots/   # UI screenshots for documentation
 ├── static/
 │   ├── index.html     # Application shell & modals
 │   ├── styles.css     # Dark-slate engineering workbench theme
 │   └── app.js         # Live Markdown/Outliner renderer, autocomplete, graph & sync
 ├── vault/             # Plain-text Markdown (.md) files (auto-seeded with demo notes if empty)
-│   ├── daily/         # Daily engineering logs (YYYY-MM-DD.md)
+│   ├── daily/         # Daily logs (YYYY-MM-DD.md)
 │   ├── projects/      # Architecture & project notes
 │   ├── kb/            # Technical knowledge base & operational runbooks
 │   └── templates/     # Reusable Markdown templates (e.g. ADR Template)

@@ -238,9 +238,7 @@ function renderInline(text) {
   // WikiLinks [[Target|Alias]] or [[Target]]
   s = s.replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
     const label = alias || target;
-    return `<a class="wikilink" data-wikilink="${escapeHtml(target.trim())}">[[${escapeHtml(
-      label.trim()
-    )}]]</a>`;
+    return `<a class="wikilink" data-wikilink="${target.trim()}">[[${label.trim()}]]</a>`;
   });
 
   // Markdown External Links [Label](https://...)
@@ -1362,5 +1360,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupEditorErgonomics();
   bindEvents();
   await refreshBootstrap();
-  await openDailyNote(state.today);
+
+  const params = new URLSearchParams(window.location.search);
+  const viewParam = params.get("view");
+  const noteParam = params.get("note");
+  const dateParam = params.get("date");
+
+  if (noteParam) {
+    await openNoteByPath(noteParam);
+  } else if (viewParam === "tasks" || viewParam === "links" || viewParam === "graph") {
+    switchWorkspaceView(viewParam);
+  } else {
+    await openDailyNote(dateParam || state.today);
+  }
 });
