@@ -1099,6 +1099,13 @@ function bindEvents() {
 
   // Global delegated click handlers
   document.body.addEventListener("click", async (e) => {
+    const navBtn = e.target.closest(".primary-nav .nav-item[data-view]");
+    if (navBtn) {
+      const v = navBtn.dataset.view;
+      if (v === "daily") openDailyNote(state.today);
+      else switchWorkspaceView(v);
+      return;
+    }
     // Open note from sidebar, backlink, or task/link source pill
     const noteTrigger = e.target.closest("[data-note-path]");
     if (noteTrigger) {
