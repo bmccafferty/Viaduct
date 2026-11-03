@@ -946,6 +946,8 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.handle_pin_link(body)
         elif path == "/api/vault/archive-demo":
             return self.handle_archive_demo()
+        elif path == "/api/vault/restore-demo":
+            return self.handle_restore_demo()
         elif path == "/api/reindex":
             full_reindex()
             return self.send_json({"ok": True})
@@ -985,9 +987,14 @@ class ViaductHandler(SimpleHTTPRequestHandler):
         today_str = datetime.now().strftime("%Y-%m-%d")
         conn.close()
 
+        demo_archived = (VAULT_DIR / "_demo_archive").exists() and any(
+            (VAULT_DIR / "_demo_archive").rglob("*.md")
+        )
+
         return self.send_json({
             "today": today_str,
             "vault_dir": str(VAULT_DIR),
+            "demo_archived": demo_archived,
             "notes": notes,
             "counts": {
                 "notes": len(notes),
@@ -1508,6 +1515,21 @@ tags: [notes]
         create_daily_note_if_missing(today_str)
         full_reindex()
         return self.send_json({"ok": True, "moved": moved, "today": today_str})
+
+    def handle_restore_demo(self):
+        import shutil
+        archive_root = VAULT_DIR / "_demo_archive"
+        restored = 0
+        if archive_root.exists():
+            for p in list(archive_root.rglob("*.md")):
+                rel = p.relative_to(archive_root)
+                dest = VAULT_DIR / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(p), str(dest))
+                restored += 1
+            shutil.rmtree(archive_root, ignore_errors=True)
+        full_reindex()
+        return self.send_json({"ok": True, "restored": restored})
 
     def handle_get_report(self, qs: dict):
         today_dt = datetime.now()

@@ -293,6 +293,11 @@ async function refreshBootstrap() {
   document.getElementById("badge-links").textContent = state.counts.links;
   document.getElementById("badge-notes").textContent = state.counts.notes;
 
+  const archiveDemoBtn = document.getElementById("btn-archive-demo");
+  if (archiveDemoBtn) {
+    archiveDemoBtn.classList.toggle("hidden", Boolean(data.demo_archived));
+  }
+
   renderSidebarTrees();
   populateProjectDropdown();
 }
