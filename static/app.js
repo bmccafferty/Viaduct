@@ -23,6 +23,9 @@ const state = {
   linkFilterCategory: "",
   linkFilterDomain: "",
   linkFilterSearch: "",
+  reportMode: "121",
+  reportStart: "",
+  reportEnd: "",
   cmdSelectedIndex: 0,
   cmdResults: [],
 };
@@ -235,6 +238,9 @@ function renderInline(text) {
   // Bold **text**
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 
+  // Italic *text*
+  s = s.replace(/(^|\s)\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
   // WikiLinks [[Target|Alias]] or [[Target]]
   s = s.replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
     const label = alias || target;
@@ -292,14 +298,15 @@ async function refreshBootstrap() {
 }
 
 function renderSidebarTrees() {
-  const byFolder = { projects: [], kb: [], daily: [], templates: [] };
+  const byFolder = { projects: [], kb: [], daily: [], reports: [], templates: [] };
   state.notes.forEach((n) => {
     if (byFolder[n.folder]) byFolder[n.folder].push(n);
     else byFolder.projects.push(n);
   });
 
-  // Sort daily descending
+  // Sort daily & reports descending
   byFolder.daily.sort((a, b) => b.title.localeCompare(a.title));
+  byFolder.reports.sort((a, b) => b.updated_at - a.updated_at);
 
   const renderTree = (containerId, items) => {
     const el = document.getElementById(containerId);
@@ -321,6 +328,7 @@ function renderSidebarTrees() {
   renderTree("tree-projects", byFolder.projects);
   renderTree("tree-kb", byFolder.kb);
   renderTree("tree-daily", byFolder.daily);
+  renderTree("tree-reports", byFolder.reports);
   renderTree("tree-templates", byFolder.templates);
 
   // Tags
@@ -357,12 +365,14 @@ function switchWorkspaceView(viewName) {
   const editorView = document.getElementById("view-editor");
   const tasksView = document.getElementById("view-tasks");
   const linksView = document.getElementById("view-links");
+  const reportsView = document.getElementById("view-reports");
   const graphView = document.getElementById("view-graph");
   const modeGroup = document.getElementById("editor-mode-group");
 
   editorView.classList.remove("active");
   tasksView.classList.remove("active");
   linksView.classList.remove("active");
+  if (reportsView) reportsView.classList.remove("active");
   graphView.classList.remove("active");
 
   if (viewName === "daily" || viewName === "editor") {
@@ -378,6 +388,10 @@ function switchWorkspaceView(viewName) {
       linksView.classList.add("active");
       document.getElementById("topbar-title").textContent = "URL & Bookmark Registry";
       loadLinksDashboard();
+    } else if (viewName === "reports") {
+      reportsView.classList.add("active");
+      document.getElementById("topbar-title").textContent = "1:1 & Weekly Digest";
+      loadReportsDashboard();
     } else if (viewName === "graph") {
       graphView.classList.add("active");
       document.getElementById("topbar-title").textContent = "Knowledge Topology Graph";
@@ -861,7 +875,50 @@ function renderLinksDashboard() {
     .join("");
 }
 
-// --- View 4: Force-Directed Knowledge Topology Graph ---
+// --- View 4: 1:1 Sync & Weekly Wrap-Up Generator ---
+
+function setReportPresetDays(daysBack) {
+  const endDt = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
+  const startDt = new Date(endDt);
+  startDt.setDate(startDt.getDate() - daysBack);
+  state.reportStart = startDt.toISOString().slice(0, 10);
+  state.reportEnd = endDt.toISOString().slice(0, 10);
+  document.getElementById("report-start-date").value = state.reportStart;
+  document.getElementById("report-end-date").value = state.reportEnd;
+}
+
+async function loadReportsDashboard() {
+  if (!state.reportStart || !state.reportEnd) {
+    setReportPresetDays(6);
+  }
+  const qs = `mode=${encodeURIComponent(state.reportMode)}&start=${encodeURIComponent(
+    state.reportStart
+  )}&end=${encodeURIComponent(state.reportEnd)}`;
+  const data = await apiGet(`/api/report?${qs}`);
+
+  const stats = data.stats || {};
+  document.getElementById("report-kpis").innerHTML = `
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-emerald)">${
+      stats.completed_count || 0
+    }</div><div class="kpi-label">Shipped [x]</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-amber)">${
+      stats.in_progress_count || 0
+    }</div><div class="kpi-label">In Progress [/]</div></div>
+    <div class="kpi-card"><div class="kpi-val">${
+      stats.days_logged || 0
+    }</div><div class="kpi-label">Daily Logs</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-cyan)">${
+      stats.links_captured || 0
+    }</div><div class="kpi-label">Links Logged</div></div>
+  `;
+
+  document.getElementById("report-range-label").textContent = `${data.start} → ${data.end}`;
+  const reportEditor = document.getElementById("report-editor");
+  reportEditor.value = data.markdown || "";
+  document.getElementById("report-preview").innerHTML = renderMarkdown(reportEditor.value);
+}
+
+// --- View 5: Force-Directed Knowledge Topology Graph ---
 
 async function loadGraphView() {
   const data = await apiGet("/api/graph");
@@ -1036,6 +1093,7 @@ function bindEvents() {
   document.getElementById("nav-daily").addEventListener("click", () => openDailyNote(state.today));
   document.getElementById("nav-tasks").addEventListener("click", () => switchWorkspaceView("tasks"));
   document.getElementById("nav-links").addEventListener("click", () => switchWorkspaceView("links"));
+  document.getElementById("nav-reports").addEventListener("click", () => switchWorkspaceView("reports"));
   document.getElementById("nav-graph").addEventListener("click", () => switchWorkspaceView("graph"));
   document.getElementById("btn-jump-today").addEventListener("click", () => openDailyNote(state.today));
 
@@ -1326,6 +1384,80 @@ function bindEvents() {
     renderLinksDashboard();
   });
 
+  // 1:1 & Weekly Digest Generator Controls
+  document.querySelectorAll("#report-mode-tabs .filter-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document
+        .querySelectorAll("#report-mode-tabs .filter-tab")
+        .forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      state.reportMode = tab.dataset.mode;
+      loadReportsDashboard();
+    });
+  });
+
+  document.getElementById("btn-preset-7d").addEventListener("click", () => {
+    setReportPresetDays(6);
+    loadReportsDashboard();
+  });
+
+  document.getElementById("btn-preset-14d").addEventListener("click", () => {
+    setReportPresetDays(13);
+    loadReportsDashboard();
+  });
+
+  document.getElementById("btn-preset-week").addEventListener("click", () => {
+    const now = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
+    const day = now.getDay(); // 0=Sun, 1=Mon...
+    const diffToMon = day === 0 ? 6 : day - 1;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - diffToMon);
+    state.reportStart = mon.toISOString().slice(0, 10);
+    state.reportEnd = now.toISOString().slice(0, 10);
+    document.getElementById("report-start-date").value = state.reportStart;
+    document.getElementById("report-end-date").value = state.reportEnd;
+    loadReportsDashboard();
+  });
+
+  document.getElementById("report-start-date").addEventListener("change", (e) => {
+    state.reportStart = e.target.value;
+    loadReportsDashboard();
+  });
+
+  document.getElementById("report-end-date").addEventListener("change", (e) => {
+    state.reportEnd = e.target.value;
+    loadReportsDashboard();
+  });
+
+  document.getElementById("report-editor").addEventListener("input", (e) => {
+    document.getElementById("report-preview").innerHTML = renderMarkdown(e.target.value);
+  });
+
+  document.getElementById("btn-copy-report").addEventListener("click", (e) => {
+    const md = document.getElementById("report-editor").value;
+    navigator.clipboard.writeText(md);
+    const btn = e.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = "✓ Copied to Clipboard";
+    setTimeout(() => (btn.textContent = orig), 1800);
+  });
+
+  document.getElementById("btn-save-report").addEventListener("click", async () => {
+    const mdBody = document.getElementById("report-editor").value;
+    const label = state.reportMode === "121" ? "1-1 Sync" : "Weekly Wrap-Up";
+    const fileTitle = `${state.reportEnd} ${label}`;
+    const relPath = `reports/${fileTitle}.md`;
+    const fullContent = `---\ntitle: "${fileTitle}"\ntype: report\nstatus: ${state.reportMode}\ntags: [report, ${state.reportMode}]\n---\n\n${mdBody}`;
+    const res = await apiPost("/api/note/save", {
+      path: relPath,
+      content: fullContent,
+    });
+    if (res.ok && res.note) {
+      await refreshBootstrap();
+      openNoteByPath(res.note.path);
+    }
+  });
+
   // Command Palette triggers & keyboard shortcuts
   document.getElementById("btn-cmd-palette").addEventListener("click", () => openCommandPalette(""));
   document.getElementById("sidebar-search-trigger").addEventListener("click", () =>
@@ -1368,7 +1500,12 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   if (noteParam) {
     await openNoteByPath(noteParam);
-  } else if (viewParam === "tasks" || viewParam === "links" || viewParam === "graph") {
+  } else if (
+    viewParam === "tasks" ||
+    viewParam === "links" ||
+    viewParam === "reports" ||
+    viewParam === "graph"
+  ) {
     switchWorkspaceView(viewParam);
   } else {
     await openDailyNote(dateParam || state.today);

@@ -8,6 +8,7 @@
 - **Sub-5ms Full-Text Search (SQLite FTS5)**: Instant full-text search (`⌘K` / `Ctrl+K`) with BM25 relevance ranking, Porter stemming, and highlighted context snippets across all notes, code blocks, and `#tags`.
 - **Bidirectional `[[WikiLinks]]` & Unlinked Mentions**: Every note automatically tracks incoming backlinks (with line numbers and surrounding context) and discovers unlinked mentions across your vault—no plugins required.
 - **Centralized Cross-Note Task Sheet (Two-Way Sync)**: Add tasks (`- [ ]`, `- [/]`, `- [x]`) on any Daily Log, Project Note, or Runbook. Every task across every day is aggregated into one central **Task Sheet** where toggling status updates the exact line in the source `.md` file on disk.
+- **1:1 Sync & Weekly Wrap-Up Generator**: Automatically compiles completed `[x]` deliverables, active `[/]` workstreams, daily outliner work logs, and captured links across any date range into a **Wednesday Manager 1:1 Doc** or **Friday "What I Did" Wrap-Up**—ready to copy or save directly into `vault/reports/`.
 - **Built-In URL & Bookmark Registry**: Paste any `[Title](https://...)` or bare URL into any note—or capture links directly from the UI—and Viaduct automatically extracts the domain, classifies the resource (`Docs`, `Observability`, `Git / PRs`, `Runbooks`, `Tickets`), and links back to the exact note and line where you saved it.
 - **Interactive Knowledge Topology Graph**: Force-directed visual graph of how your Daily Logs, Projects, and Technical Runbooks connect.
 
@@ -27,7 +28,10 @@
 ### 4. Technical URL & Bookmark Registry
 ![URL & Bookmark Registry](docs/screenshots/link-registry.png)
 
-### 5. Knowledge & Architecture Link Topology Graph
+### 5. 1:1 Sync & Weekly Wrap-Up Generator
+![1:1 Sync & Weekly Wrap-Up Generator](docs/screenshots/weekly-digest.png)
+
+### 6. Knowledge & Architecture Link Topology Graph
 ![Knowledge Topology Graph](docs/screenshots/topology-graph.png)
 
 ---

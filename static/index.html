@@ -84,6 +84,20 @@
           <span class="nav-badge info" id="badge-links">0</span>
         </button>
 
+        <button class="nav-item" data-view="reports" id="nav-reports">
+          <div class="nav-item-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>1:1 & Weekly Digest</span>
+          </div>
+          <span class="nav-badge accent">SYNC</span>
+        </button>
+
         <button class="nav-item" data-view="graph" id="nav-graph">
           <div class="nav-item-left">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -118,6 +132,11 @@
           <button class="mini-add-btn" id="btn-jump-today" title="Jump to Today">TODAY</button>
         </div>
         <div class="note-tree" id="tree-daily"></div>
+
+        <div class="section-header">
+          <span>SAVED 1:1 & REPORTS</span>
+        </div>
+        <div class="note-tree" id="tree-reports"></div>
 
         <div class="section-header">
           <span>TEMPLATES</span>
@@ -388,7 +407,60 @@
         </div>
       </section>
 
-      <!-- VIEW 4: KNOWLEDGE TOPOLOGY GRAPH -->
+      <!-- VIEW 4: 1:1 & WEEKLY STATUS DIGEST GENERATOR -->
+      <section class="workspace-view" id="view-reports">
+        <div class="dashboard-container" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+          <div class="dashboard-header" style="flex-shrink:0;">
+            <div>
+              <h1>1:1 Sync & Weekly Wrap-Up Generator</h1>
+              <p class="subtitle">
+                Automatically compiles your completed <code>[x]</code> tasks, active <code>[/]</code> workstreams, daily outliner work logs, and captured links across any date range into a ready-to-share status doc.
+              </p>
+            </div>
+            <div class="kpi-strip" id="report-kpis"></div>
+          </div>
+
+          <div class="filter-bar" style="flex-shrink:0;">
+            <div class="filter-tabs" id="report-mode-tabs">
+              <button class="filter-tab active" data-mode="121">🤝 Wednesday Manager 1:1 Doc</button>
+              <button class="filter-tab" data-mode="friday">📋 Friday "What I Did" Wrap-Up</button>
+            </div>
+
+            <div class="filter-controls" style="align-items:center;">
+              <button class="btn-sm" id="btn-preset-7d">Last 7 Days</button>
+              <button class="btn-sm" id="btn-preset-week">This Week (Mon–Fri)</button>
+              <button class="btn-sm" id="btn-preset-14d">Last 14 Days</button>
+              <span class="pane-hint">From:</span>
+              <input type="date" id="report-start-date" class="date-input" />
+              <span class="pane-hint">To:</span>
+              <input type="date" id="report-end-date" class="date-input" />
+              <button class="action-btn" id="btn-copy-report">📋 Copy Markdown</button>
+              <button class="action-btn primary" id="btn-save-report">💾 Save as .md Note in Vault</button>
+            </div>
+          </div>
+
+          <div class="editor-split-container mode-split" style="flex:1;grid-template-columns:1fr 1fr;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;">
+            <div class="editor-pane">
+              <div class="pane-Subheader">
+                <span>GENERATED MARKDOWN (EDITABLE BEFORE COPY OR SAVE)</span>
+                <span class="pane-hint">Add your 1:1 talking points or edits directly</span>
+              </div>
+              <div class="textarea-wrapper">
+                <textarea id="report-editor" spellcheck="false" style="width:100%;height:100%;background:#090d16;color:#e2e8f0;border:none;outline:none;resize:none;padding:18px 20px;font-family:var(--font-mono);font-size:13px;line-height:1.65;"></textarea>
+              </div>
+            </div>
+            <div class="preview-pane" style="border-right:none;">
+              <div class="pane-Subheader">
+                <span>LIVE FORMATTED DOCUMENT PREVIEW</span>
+                <span class="pane-hint" id="report-range-label"></span>
+              </div>
+              <div id="report-preview" class="markdown-body"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 5: KNOWLEDGE TOPOLOGY GRAPH -->
       <section class="workspace-view" id="view-graph">
         <div class="graph-container">
           <div class="graph-overlay">

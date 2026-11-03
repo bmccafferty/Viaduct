@@ -41,7 +41,7 @@ INLINE_TAG_RE = re.compile(r"#([a-zA-Z0-9_\-/]+)")
 
 def ensure_dirs():
     VAULT_DIR.mkdir(parents=True, exist_ok=True)
-    for sub in ["daily", "projects", "kb", "templates"]:
+    for sub in ["daily", "projects", "kb", "reports", "templates"]:
         (VAULT_DIR / sub).mkdir(parents=True, exist_ok=True)
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -897,6 +897,8 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.handle_get_links(qs)
         elif path == "/api/graph":
             return self.handle_get_graph()
+        elif path == "/api/report":
+            return self.handle_get_report(qs)
         elif path == "/api/export":
             return self.handle_export()
 
@@ -1467,6 +1469,194 @@ tags: [notes]
         notes = [dict(r) for r in conn.execute("SELECT * FROM notes")]
         conn.close()
         return self.send_json({"exported_at": datetime.now().isoformat(), "notes": notes})
+
+    def handle_get_report(self, qs: dict):
+        today_dt = datetime.now()
+        default_end = today_dt.strftime("%Y-%m-%d")
+        default_start = (today_dt - timedelta(days=6)).strftime("%Y-%m-%d")
+
+        start_date = qs.get("start", [default_start])[0].strip() or default_start
+        end_date = qs.get("end", [default_end])[0].strip() or default_end
+        mode = qs.get("mode", ["121"])[0].strip()  # '121' or 'friday'
+
+        conn = get_db()
+        # 1. Fetch daily notes in [start_date, end_date]
+        daily_rows = conn.execute(
+            """SELECT path, title, raw_content FROM notes
+               WHERE folder = 'daily' AND title >= ? AND title <= ?
+               ORDER BY title DESC""",
+            (start_date, end_date)
+        ).fetchall()
+
+        daily_paths = {r["path"] for r in daily_rows}
+
+        # Extract work log outliner entries from daily notes
+        work_logs_by_day = []
+        for r in daily_rows:
+            day_title = r["title"]
+            lines = r["raw_content"].splitlines()
+            in_work_section = False
+            entries = []
+            for line in lines:
+                s = line.strip()
+                if s.startswith("## "):
+                    if "work log" in s.lower() or "outliner" in s.lower():
+                        in_work_section = True
+                    else:
+                        in_work_section = False
+                    continue
+                if in_work_section and s and (s.startswith("-") or s.startswith("*")):
+                    if not TASK_RE.match(line):
+                        entries.append(line)
+            if entries:
+                work_logs_by_day.append({"date": day_title, "lines": entries})
+
+        # 2. Fetch tasks across the vault
+        all_tasks = []
+        for tr in conn.execute("SELECT * FROM tasks ORDER BY priority ASC, source_path DESC, line_num ASC"):
+            td = dict(tr)
+            td["tags"] = json.loads(td.pop("tags_json", "[]"))
+            td["project_links"] = json.loads(td.pop("project_links_json", "[]"))
+            all_tasks.append(td)
+
+        # Completed tasks: in daily notes within range OR project/kb tasks completed
+        completed_tasks = [
+            t for t in all_tasks
+            if t["state"] == "done" and (
+                t["source_path"] in daily_paths or
+                (t["due_date"] and start_date <= t["due_date"] <= end_date) or
+                t["folder"] != "daily"
+            )
+        ]
+        in_progress_tasks = [t for t in all_tasks if t["state"] == "doing"]
+        high_open_tasks = [
+            t for t in all_tasks
+            if t["state"] == "todo" and t["priority"] in ("high", "med")
+        ]
+
+        # 3. Captured links from daily notes in range
+        links_rows = conn.execute(
+            """SELECT url, domain, title, source_title, category
+               FROM links
+               WHERE (folder_check IS NULL OR 1=1) AND source_title >= ? AND source_title <= ?
+               ORDER BY id DESC""",
+            (start_date, end_date)
+        ).fetchall() if False else conn.execute(
+            """SELECT url, domain, title, source_path, source_title, category
+               FROM links ORDER BY updated_at DESC"""
+        ).fetchall()
+
+        period_links = [
+            dict(r) for r in links_rows
+            if r["source_path"] in daily_paths
+        ]
+
+        # 4. Active projects referenced in range
+        projects_touched = {}
+        for t in (completed_tasks + in_progress_tasks + high_open_tasks):
+            for pl in t["project_links"]:
+                projects_touched.setdefault(pl, {"done": 0, "open": 0})
+                if t["state"] == "done":
+                    projects_touched[pl]["done"] += 1
+                else:
+                    projects_touched[pl]["open"] += 1
+
+        conn.close()
+
+        # Build Markdown Document
+        md = []
+        if mode == "121":
+            md.append(f"# 🤝 Manager 1:1 Sync & Status ({start_date} → {end_date})")
+            md.append("")
+            md.append("## 🏆 Key Wins & Shipped Deliverables")
+            if completed_tasks:
+                for t in completed_tasks:
+                    md.append(f"- ✅ {t['clean_text']} *(from `{t['source_title']}`)*")
+            else:
+                md.append("- *No completed tasks recorded in this date window.*")
+
+            md.append("")
+            md.append("## 🚀 Currently In Progress (`[/]`)")
+            if in_progress_tasks:
+                for t in in_progress_tasks:
+                    md.append(f"- [/] **{t['clean_text']}** *(Source: {t['source_title']})*")
+            else:
+                md.append("- *No tasks currently marked `[/]` in progress.*")
+
+            md.append("")
+            md.append("## 🎯 Top Priorities & Next Up")
+            if high_open_tasks:
+                for t in high_open_tasks[:8]:
+                    prio_tag = f"`!{t['priority'].upper()}` " if t["priority"] in ("high", "med") else ""
+                    md.append(f"- [ ] {prio_tag}{t['clean_text']} *(Source: {t['source_title']})*")
+            else:
+                md.append("- *All high/medium priority tasks cleared.*")
+
+            md.append("")
+            md.append("## 💬 1:1 Discussion Topics / Decisions / Escalations")
+            md.append("- **Architecture & Delivery**: ")
+            md.append("- **Risks / Blockers**: ")
+            md.append("- **Team / Resourcing**: ")
+
+            md.append("")
+            md.append("## 🛠 Engineering Work Log Highlights")
+            if work_logs_by_day:
+                for day in work_logs_by_day:
+                    md.append(f"### 📅 {day['date']}")
+                    for l in day["lines"]:
+                        md.append(l)
+            else:
+                md.append("- *No daily work log bullets in this period.*")
+
+        else:
+            # Friday "What I Have Done" Weekly Wrap-Up
+            md.append(f"# 📋 Weekly Wrap-Up: What I Did ({start_date} → {end_date})")
+            md.append("")
+            md.append(f"**Summary**: Completed **{len(completed_tasks)}** tasks, progressed **{len(in_progress_tasks)}** active workstreams, and logged **{len(period_links)}** technical references across **{len(daily_rows)}** daily logs.")
+            md.append("")
+            md.append("## ✅ Completed This Week")
+            if completed_tasks:
+                for t in completed_tasks:
+                    md.append(f"- ✅ {t['clean_text']} *(from `{t['source_title']}`)*")
+            else:
+                md.append("- *No completed tasks in this range.*")
+
+            md.append("")
+            md.append("## 🛠 Chronological Daily Work Log")
+            if work_logs_by_day:
+                for day in work_logs_by_day:
+                    md.append(f"### 📅 {day['date']}")
+                    for l in day["lines"]:
+                        md.append(l)
+            else:
+                md.append("- *No work log entries in this range.*")
+
+            md.append("")
+            md.append("## 🔄 Carrying Into Next Week")
+            for t in (in_progress_tasks + high_open_tasks[:6]):
+                box = "/" if t["state"] == "doing" else " "
+                md.append(f"- [{box}] {t['clean_text']} *(from `{t['source_title']}`)*")
+
+            if period_links:
+                md.append("")
+                md.append("## 🔗 Key Docs, PRs & Dashboards Referenced")
+                for lk in period_links:
+                    md.append(f"- [{lk['title']}]({lk['url']}) — `{lk['domain']}` *({lk['source_title']})*")
+
+        markdown_text = "\n".join(md)
+        return self.send_json({
+            "start": start_date,
+            "end": end_date,
+            "mode": mode,
+            "stats": {
+                "days_logged": len(daily_rows),
+                "completed_count": len(completed_tasks),
+                "in_progress_count": len(in_progress_tasks),
+                "links_captured": len(period_links),
+                "projects_touched": len(projects_touched)
+            },
+            "markdown": markdown_text
+        })
 
 
 def run_server():
