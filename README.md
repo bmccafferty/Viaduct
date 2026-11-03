@@ -34,6 +34,9 @@
 ### 6. Knowledge & Architecture Link Topology Graph
 ![Knowledge Topology Graph](docs/screenshots/topology-graph.png)
 
+### 7. Settings, Themes & Vault Management
+![Settings, Themes & Vault Management](docs/screenshots/settings.png)
+
 ---
 
 ## Quick Start (Download & Run Locally)
@@ -75,8 +78,8 @@ So you never have to manually open a terminal and run `./start.sh`, run the cros
 - **On Windows WSL / Linux**: Configures a `systemd --user` service (`~/.config/systemd/user/viaduct.service`) plus a lightweight WSL shell login hook so Viaduct is always listening on `http://localhost:8420` from your Windows or Mac browser.
 - To remove the background service at any time: `./uninstall-service.sh`.
 
-### 4. Starting Fresh (Archiving the Demo Vault)
-Viaduct ships with sample notes so you can explore backlinks, tasks, and weekly digests right away. When you are ready to start logging your own work, click **`Archive Demo`** in the bottom-left sidebar footer—all sample notes are safely moved to `vault/_demo_archive/` (ignored by the search/task index) and a clean Daily Log is created for today.
+### 4. Starting Fresh (Archiving or Restoring the Demo Vault)
+Viaduct ships with sample notes so you can explore backlinks, tasks, and weekly digests right away. When you are ready to start logging your own work, click the **`⚙` Settings** icon in the bottom-left sidebar footer and click **`Archive Demo Notes`**—all sample notes are safely moved to `vault/_demo_archive/` (ignored by the search/task index), and you can restore them anytime with one click (`Restore Demo Notes`).
 
 ---
 

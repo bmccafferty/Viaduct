@@ -23,7 +23,41 @@ BASE_DIR = Path(__file__).resolve().parent
 VAULT_DIR = BASE_DIR / "vault"
 INDEX_DIR = BASE_DIR / ".viaduct"
 DB_PATH = INDEX_DIR / "index.db"
+SETTINGS_PATH = INDEX_DIR / "settings.json"
 STATIC_DIR = BASE_DIR / "static"
+
+DEFAULT_SETTINGS = {
+    "theme": "midnight",
+    "editor_font_size": 13.5,
+    "default_editor_mode": "split",
+    "show_inspector": True,
+    "default_owner": "Tech Lead",
+    "default_env": "prod-k8s",
+    "default_tags": "cloud, ops",
+    "midweek_day": 3
+}
+
+
+def load_settings() -> dict:
+    s = dict(DEFAULT_SETTINGS)
+    if SETTINGS_PATH.exists():
+        try:
+            saved = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            if isinstance(saved, dict):
+                s.update(saved)
+        except Exception:
+            pass
+    return s
+
+
+def save_settings(new_settings: dict) -> dict:
+    current = load_settings()
+    for k in DEFAULT_SETTINGS:
+        if k in new_settings:
+            current[k] = new_settings[k]
+    INDEX_DIR.mkdir(parents=True, exist_ok=True)
+    SETTINGS_PATH.write_text(json.dumps(current, indent=2), encoding="utf-8")
+    return current
 
 PORT = int(os.environ.get("VIADUCT_PORT", 8420))
 
@@ -514,11 +548,15 @@ def create_daily_note_if_missing(date_str: str) -> str:
     if full_path.exists():
         return rel_path
 
+    cfg = load_settings()
+    custom_tags = [t.strip().lstrip("#") for t in cfg.get("default_tags", "cloud").split(",") if t.strip()]
+    tags_list = ", ".join(["daily-log"] + [t for t in custom_tags if t != "daily-log"])
+
     # Check if yesterday had unfinished tasks to offer carry-over info or clean template
     template = f"""---
 title: "{date_str}"
 type: daily
-tags: [daily-log, cloud]
+tags: [{tags_list}]
 ---
 
 # {date_str} — Daily Log
@@ -915,6 +953,8 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.handle_get_graph()
         elif path == "/api/report":
             return self.handle_get_report(qs)
+        elif path == "/api/settings":
+            return self.send_json(load_settings())
         elif path == "/api/export":
             return self.handle_export()
 
@@ -948,6 +988,9 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.handle_archive_demo()
         elif path == "/api/vault/restore-demo":
             return self.handle_restore_demo()
+        elif path == "/api/settings/save":
+            saved = save_settings(body)
+            return self.send_json({"ok": True, "settings": saved})
         elif path == "/api/reindex":
             full_reindex()
             return self.send_json({"ok": True})
@@ -984,22 +1027,32 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             "SELECT tag, COUNT(*) as count FROM tags GROUP BY tag ORDER BY count DESC, tag ASC"
         ).fetchall()
 
+        total_words = conn.execute("SELECT COALESCE(SUM(word_count), 0) AS w FROM notes").fetchone()["w"]
+        backlinks_count = conn.execute("SELECT COUNT(*) AS c FROM backlinks").fetchone()["c"]
+
         today_str = datetime.now().strftime("%Y-%m-%d")
         conn.close()
 
         demo_archived = (VAULT_DIR / "_demo_archive").exists() and any(
             (VAULT_DIR / "_demo_archive").rglob("*.md")
         )
+        archived_count = len(list((VAULT_DIR / "_demo_archive").rglob("*.md"))) if demo_archived else 0
+        db_size_kb = round(DB_PATH.stat().st_size / 1024, 1) if DB_PATH.exists() else 0
 
         return self.send_json({
             "today": today_str,
             "vault_dir": str(VAULT_DIR),
             "demo_archived": demo_archived,
+            "archived_count": archived_count,
+            "db_size_kb": db_size_kb,
+            "settings": load_settings(),
             "notes": notes,
             "counts": {
                 "notes": len(notes),
                 "open_tasks": open_tasks_count,
-                "links": links_count
+                "links": links_count,
+                "total_words": total_words,
+                "backlinks": backlinks_count
             },
             "tags": [dict(r) for r in tags_rows]
         })
@@ -1148,14 +1201,20 @@ class ViaductHandler(SimpleHTTPRequestHandler):
             return self.send_json({"ok": True, "note": payload, "existed": True})
 
         today = datetime.now().strftime("%Y-%m-%d")
+        cfg = load_settings()
+        def_owner = cfg.get("default_owner", "Tech Lead")
+        def_env = cfg.get("default_env", "prod-k8s")
+        custom_tags = [t.strip().lstrip("#") for t in cfg.get("default_tags", "cloud, ops").split(",") if t.strip()]
+        tags_suffix = (", " + ", ".join(custom_tags)) if custom_tags else ""
+
         if folder == "projects" or template_type == "project":
             content = f"""---
 title: "{title}"
 type: project
 status: active
-env: prod-k8s
-owner: Tech Lead
-tags: [project, cloud]
+env: {def_env}
+owner: {def_owner}
+tags: [project{tags_suffix}]
 ---
 
 # {title}
@@ -1175,9 +1234,9 @@ tags: [project, cloud]
 title: "{title}"
 type: kb
 status: verified
-env: prod
-owner: Tech Lead
-tags: [runbook, kb, ops]
+env: {def_env}
+owner: {def_owner}
+tags: [runbook, kb{tags_suffix}]
 ---
 
 # {title}
@@ -1198,7 +1257,7 @@ kubectl get pods -A
             content = f"""---
 title: "{title}"
 type: {folder}
-tags: [notes]
+tags: [notes{tags_suffix}]
 ---
 
 # {title}

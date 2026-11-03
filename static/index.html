@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VIADUCT // Cloud Knowledge & Operations Vault</title>
-  <link rel="stylesheet" href="/styles.css?v=2.9" />
+  <link rel="stylesheet" href="/styles.css?v=3.0" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -155,9 +155,9 @@
           <span class="status-dot online"></span>
           <span id="vault-status-text" title="All notes saved as local .md files">Local Vault Synced</span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <button class="mini-add-btn" id="btn-archive-demo" title="Move starter demo notes to vault/_demo_archive/ and start fresh">Archive Demo</button>
+        <div style="display:flex;align-items:center;gap:4px;">
           <button class="icon-btn" id="btn-reindex" title="Force SQLite FTS5 Re-index">↻</button>
+          <button class="icon-btn" id="btn-open-settings" title="Settings, Themes & Vault Management">⚙</button>
         </div>
       </div>
     </aside>
@@ -475,6 +475,194 @@
           <canvas id="graph-canvas"></canvas>
         </div>
       </section>
+
+      <!-- VIEW 6: SETTINGS, THEMES & VAULT MANAGEMENT -->
+      <section class="workspace-view" id="view-settings">
+        <div class="dashboard-container">
+          <div class="dashboard-header">
+            <div>
+              <h1>Settings, Themes & Vault Management</h1>
+              <p class="subtitle">
+                Customize your colour theme, editor ergonomics, default note metadata, and manage demo files or SQLite FTS5 indexing.
+              </p>
+            </div>
+            <div class="kpi-strip" id="settings-kpis"></div>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Card 1: Theme & Appearance -->
+            <div class="settings-card">
+              <h3>🎨 Colour Theme & Appearance</h3>
+              <div class="theme-swatches" id="theme-swatches">
+                <div class="theme-card active" data-theme-choice="midnight">
+                  <div class="theme-preview-dots">
+                    <span style="background:#090d16"></span>
+                    <span style="background:#38bdf8"></span>
+                    <span style="background:#10b981"></span>
+                  </div>
+                  <div>
+                    <strong>Midnight Slate</strong>
+                    <div class="setting-sub">Default dark workbench</div>
+                  </div>
+                </div>
+
+                <div class="theme-card" data-theme-choice="obsidian">
+                  <div class="theme-preview-dots">
+                    <span style="background:#050507"></span>
+                    <span style="background:#a855f7"></span>
+                    <span style="background:#34d399"></span>
+                  </div>
+                  <div>
+                    <strong>Obsidian Carbon</strong>
+                    <div class="setting-sub">OLED black & violet</div>
+                  </div>
+                </div>
+
+                <div class="theme-card" data-theme-choice="phosphor">
+                  <div class="theme-preview-dots">
+                    <span style="background:#06100c"></span>
+                    <span style="background:#10b981"></span>
+                    <span style="background:#f59e0b"></span>
+                  </div>
+                  <div>
+                    <strong>Terminal Phosphor</strong>
+                    <div class="setting-sub">Deep console emerald</div>
+                  </div>
+                </div>
+
+                <div class="theme-card" data-theme-choice="daylight">
+                  <div class="theme-preview-dots">
+                    <span style="background:#f8fafc"></span>
+                    <span style="background:#0284c7"></span>
+                    <span style="background:#059669"></span>
+                  </div>
+                  <div>
+                    <strong>Nordic Daylight</strong>
+                    <div class="setting-sub">High-contrast light mode</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Default Editor View Mode</label>
+                  <span class="setting-sub">Initial pane layout when opening notes</span>
+                </div>
+                <select id="setting-default-mode" class="setting-input">
+                  <option value="split">Split View (Editor + Reader)</option>
+                  <option value="edit">Editor Only</option>
+                  <option value="preview">Reader Only</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Editor Font Size</label>
+                  <span class="setting-sub">Monospace font size in Markdown editor</span>
+                </div>
+                <select id="setting-font-size" class="setting-input">
+                  <option value="12.5">Compact (12.5px)</option>
+                  <option value="13.5">Standard (13.5px)</option>
+                  <option value="15">Comfortable (15px)</option>
+                  <option value="16.5">Large (16.5px)</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Show Right Backlinks Inspector</label>
+                  <span class="setting-sub">Display incoming backlinks & context column</span>
+                </div>
+                <input type="checkbox" id="setting-show-inspector" class="task-checkbox" checked />
+              </div>
+            </div>
+
+            <!-- Card 2: Personal & Template Defaults -->
+            <div class="settings-card">
+              <h3>👤 Note Frontmatter & Review Defaults</h3>
+
+              <div class="setting-row">
+                <div>
+                  <label>Default Author / Owner</label>
+                  <span class="setting-sub">Stamped into new Project & KB frontmatter</span>
+                </div>
+                <input type="text" id="setting-default-owner" class="setting-input" placeholder="e.g. Brian McCafferty" />
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Default Target Environment</label>
+                  <span class="setting-sub">Default <code>env:</code> value for new notes</span>
+                </div>
+                <input type="text" id="setting-default-env" class="setting-input" placeholder="e.g. prod-k8s / azure" />
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Default Note Tags</label>
+                  <span class="setting-sub">Comma-separated tags added to new notes</span>
+                </div>
+                <input type="text" id="setting-default-tags" class="setting-input" placeholder="e.g. cloud, ops" />
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Mid Week 1:1 Review Day</label>
+                  <span class="setting-sub">7-day review window anchor day</span>
+                </div>
+                <select id="setting-midweek-day" class="setting-input">
+                  <option value="2">Tuesday (Last Tue → This Tue)</option>
+                  <option value="3" selected>Wednesday (Last Wed → This Wed)</option>
+                  <option value="4">Thursday (Last Thu → This Thu)</option>
+                </select>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+                <button class="action-btn primary" id="btn-save-settings">💾 Save Preferences</button>
+              </div>
+            </div>
+
+            <!-- Card 3: Demo Vault & Data Management -->
+            <div class="settings-card">
+              <h3>🗄 Starter Demo Vault & Data Maintenance</h3>
+
+              <div class="setting-row">
+                <div>
+                  <label>Starter Demo Notes</label>
+                  <span class="setting-sub" id="demo-status-label">Demo notes can be archived to <code>vault/_demo_archive/</code> or restored anytime.</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button class="action-btn" id="btn-settings-archive-demo">Archive Demo Notes</button>
+                  <button class="action-btn primary hidden" id="btn-settings-restore-demo">Restore Demo Notes</button>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>SQLite FTS5 Search & Link Index</label>
+                  <span class="setting-sub" id="db-status-label">Re-scan all <code>vault/*.md</code> files and rebuild <code>.viaduct/index.db</code></span>
+                </div>
+                <button class="action-btn" id="btn-settings-reindex">↻ Rebuild Index Now</button>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Export Full Vault Snapshot</label>
+                  <span class="setting-sub">Download all Markdown notes and metadata as a portable JSON bundle</span>
+                </div>
+                <button class="action-btn" id="btn-settings-export">⬇ Export JSON Backup</button>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <label>Local Vault Disk Path</label>
+                  <span class="setting-sub" id="settings-vault-path" style="font-family:var(--font-mono);word-break:break-all;"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -520,6 +708,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=2.9"></script>
+  <script src="/app.js?v=3.0"></script>
 </body>
 </html>

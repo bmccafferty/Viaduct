@@ -26,6 +26,20 @@ const state = {
   reportMode: "121",
   reportStart: "",
   reportEnd: "",
+  settings: {
+    theme: "midnight",
+    editor_font_size: 13.5,
+    default_editor_mode: "split",
+    show_inspector: true,
+    default_owner: "Tech Lead",
+    default_env: "prod-k8s",
+    default_tags: "cloud, ops",
+    midweek_day: 3,
+  },
+  vaultDir: "",
+  demoArchived: false,
+  archivedCount: 0,
+  dbSizeKb: 0,
   cmdSelectedIndex: 0,
   cmdResults: [],
 };
@@ -287,19 +301,37 @@ async function refreshBootstrap() {
   state.today = data.today;
   state.notes = data.notes || [];
   state.tags = data.tags || [];
-  state.counts = data.counts || { notes: 0, open_tasks: 0, links: 0 };
+  state.counts = data.counts || { notes: 0, open_tasks: 0, links: 0, total_words: 0, backlinks: 0 };
+  state.vaultDir = data.vault_dir || "";
+  state.demoArchived = Boolean(data.demo_archived);
+  state.archivedCount = data.archived_count || 0;
+  state.dbSizeKb = data.db_size_kb || 0;
+  if (data.settings) {
+    state.settings = { ...state.settings, ...data.settings };
+    applySettingsToUI();
+  }
 
   document.getElementById("badge-tasks").textContent = state.counts.open_tasks;
   document.getElementById("badge-links").textContent = state.counts.links;
   document.getElementById("badge-notes").textContent = state.counts.notes;
 
-  const archiveDemoBtn = document.getElementById("btn-archive-demo");
-  if (archiveDemoBtn) {
-    archiveDemoBtn.classList.toggle("hidden", Boolean(data.demo_archived));
-  }
-
   renderSidebarTrees();
   populateProjectDropdown();
+}
+
+function applySettingsToUI() {
+  const s = state.settings;
+  document.documentElement.setAttribute("data-theme", s.theme || "midnight");
+
+  const editor = document.getElementById("note-editor");
+  const reportEditor = document.getElementById("report-editor");
+  if (editor) editor.style.fontSize = `${s.editor_font_size || 13.5}px`;
+  if (reportEditor) reportEditor.style.fontSize = `${s.editor_font_size || 13.5}px`;
+
+  const splitContainer = document.getElementById("editor-split-container");
+  if (splitContainer) {
+    splitContainer.classList.toggle("hide-inspector", s.show_inspector === false);
+  }
 }
 
 function renderSidebarTrees() {
@@ -372,6 +404,7 @@ function switchWorkspaceView(viewName) {
   const linksView = document.getElementById("view-links");
   const reportsView = document.getElementById("view-reports");
   const graphView = document.getElementById("view-graph");
+  const settingsView = document.getElementById("view-settings");
   const modeGroup = document.getElementById("editor-mode-group");
 
   editorView.classList.remove("active");
@@ -379,6 +412,7 @@ function switchWorkspaceView(viewName) {
   linksView.classList.remove("active");
   if (reportsView) reportsView.classList.remove("active");
   graphView.classList.remove("active");
+  if (settingsView) settingsView.classList.remove("active");
 
   if (viewName === "daily" || viewName === "editor") {
     editorView.classList.add("active");
@@ -404,6 +438,11 @@ function switchWorkspaceView(viewName) {
       graphView.classList.add("active");
       document.getElementById("topbar-title").textContent = "Knowledge Topology Graph";
       loadGraphView();
+    } else if (viewName === "settings") {
+      modeGroup.classList.add("hidden");
+      settingsView.classList.add("active");
+      document.getElementById("topbar-title").textContent = "Settings & Vault Management";
+      renderSettingsDashboard();
     }
   }
 }
@@ -886,18 +925,19 @@ function renderLinksDashboard() {
 // --- View 4: 1:1 Sync & Weekly Wrap-Up Generator ---
 
 function setMidWeekReviewDates() {
-  // 7 days: Last Wednesday to This Wednesday
+  // 7 days: Last target day to This target day (default: Wednesday = 3)
+  const targetDay = Number(state.settings.midweek_day || 3);
   const now = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
   const day = now.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  const diffToWed = day === 0 ? -4 : 3 - day;
-  const thisWed = new Date(now);
-  thisWed.setDate(now.getDate() + diffToWed);
+  const diffToTarget = day === 0 ? targetDay - 7 : targetDay - day;
+  const thisAnchor = new Date(now);
+  thisAnchor.setDate(now.getDate() + diffToTarget);
 
-  const lastWed = new Date(thisWed);
-  lastWed.setDate(thisWed.getDate() - 7);
+  const lastAnchor = new Date(thisAnchor);
+  lastAnchor.setDate(thisAnchor.getDate() - 7);
 
-  state.reportStart = lastWed.toISOString().slice(0, 10);
-  state.reportEnd = thisWed.toISOString().slice(0, 10);
+  state.reportStart = lastAnchor.toISOString().slice(0, 10);
+  state.reportEnd = thisAnchor.toISOString().slice(0, 10);
   document.getElementById("report-start-date").value = state.reportStart;
   document.getElementById("report-end-date").value = state.reportEnd;
 }
@@ -1085,6 +1125,69 @@ async function loadGraphView() {
   };
 }
 
+// --- View 6: Settings, Themes & Vault Management ---
+
+function renderSettingsDashboard() {
+  const s = state.settings;
+
+  document.getElementById("settings-kpis").innerHTML = `
+    <div class="kpi-card"><div class="kpi-val">${state.counts.notes || 0}</div><div class="kpi-label">Active Notes</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-emerald)">${
+      state.counts.total_words || 0
+    }</div><div class="kpi-label">Indexed Words</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-purple)">${
+      state.counts.backlinks || 0
+    }</div><div class="kpi-label">WikiLinks</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-amber)">${
+      state.dbSizeKb || 0
+    } KB</div><div class="kpi-label">FTS5 Index DB</div></div>
+  `;
+
+  document.querySelectorAll("#theme-swatches .theme-card").forEach((card) => {
+    card.classList.toggle("active", card.dataset.themeChoice === (s.theme || "midnight"));
+  });
+
+  document.getElementById("setting-default-mode").value = s.default_editor_mode || "split";
+  document.getElementById("setting-font-size").value = String(s.editor_font_size || 13.5);
+  document.getElementById("setting-show-inspector").checked = s.show_inspector !== false;
+  document.getElementById("setting-default-owner").value = s.default_owner || "Tech Lead";
+  document.getElementById("setting-default-env").value = s.default_env || "prod-k8s";
+  document.getElementById("setting-default-tags").value = s.default_tags || "cloud, ops";
+  document.getElementById("setting-midweek-day").value = String(s.midweek_day || 3);
+
+  const archiveBtn = document.getElementById("btn-settings-archive-demo");
+  const restoreBtn = document.getElementById("btn-settings-restore-demo");
+  const demoLabel = document.getElementById("demo-status-label");
+
+  if (state.demoArchived) {
+    archiveBtn.classList.add("hidden");
+    restoreBtn.classList.remove("hidden");
+    demoLabel.innerHTML = `<strong>${state.archivedCount} demo notes</strong> are safely archived in <code>vault/_demo_archive/</code> (excluded from search & tasks).`;
+  } else {
+    archiveBtn.classList.remove("hidden");
+    restoreBtn.classList.add("hidden");
+    demoLabel.innerHTML = `Move starter demo notes into <code>vault/_demo_archive/</code> to start fresh (nothing is deleted; you can restore anytime).`;
+  }
+
+  document.getElementById("settings-vault-path").textContent = state.vaultDir;
+}
+
+async function persistSettings(partial = {}) {
+  state.settings = {
+    ...state.settings,
+    default_editor_mode: document.getElementById("setting-default-mode").value,
+    editor_font_size: parseFloat(document.getElementById("setting-font-size").value) || 13.5,
+    show_inspector: document.getElementById("setting-show-inspector").checked,
+    default_owner: document.getElementById("setting-default-owner").value.trim() || "Tech Lead",
+    default_env: document.getElementById("setting-default-env").value.trim() || "prod-k8s",
+    default_tags: document.getElementById("setting-default-tags").value.trim() || "cloud, ops",
+    midweek_day: parseInt(document.getElementById("setting-midweek-day").value, 10) || 3,
+    ...partial,
+  };
+  applySettingsToUI();
+  await apiPost("/api/settings/save", state.settings);
+}
+
 // --- Command Palette & Instant FTS5 Search (⌘K) ---
 
 function openCommandPalette(initialQuery = "") {
@@ -1256,7 +1359,9 @@ function bindEvents() {
       document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const container = document.getElementById("editor-split-container");
-      container.className = `editor-split-container mode-${btn.dataset.mode}`;
+      container.className = `editor-split-container mode-${btn.dataset.mode}${
+        state.settings.show_inspector === false ? " hide-inspector" : ""
+      }`;
       const reportContainer = document.getElementById("report-split-container");
       if (reportContainer) {
         reportContainer.className = `editor-split-container report-split-container mode-${btn.dataset.mode}`;
@@ -1514,23 +1619,86 @@ function bindEvents() {
     await refreshBootstrap();
   });
 
-  const archiveDemoBtn = document.getElementById("btn-archive-demo");
-  if (archiveDemoBtn) {
-    archiveDemoBtn.addEventListener("click", async () => {
-      if (
-        !confirm(
-          "Move current notes to vault/_demo_archive/ and start with a clean Daily Log for today? (Your templates/ folder will be kept, and nothing is deleted.)"
-        )
-      ) {
-        return;
-      }
-      const res = await apiPost("/api/vault/archive-demo", {});
-      if (res.ok) {
-        await refreshBootstrap();
-        await openDailyNote(res.today || state.today);
-      }
+  document.getElementById("btn-open-settings").addEventListener("click", () => {
+    switchWorkspaceView("settings");
+  });
+
+  document.querySelectorAll("#theme-swatches .theme-card").forEach((card) => {
+    card.addEventListener("click", async () => {
+      document
+        .querySelectorAll("#theme-swatches .theme-card")
+        .forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      await persistSettings({ theme: card.dataset.themeChoice });
     });
-  }
+  });
+
+  document.getElementById("setting-default-mode").addEventListener("change", async (e) => {
+    const mode = e.target.value;
+    document.querySelectorAll(".mode-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.mode === mode);
+    });
+    const container = document.getElementById("editor-split-container");
+    container.className = `editor-split-container mode-${mode}${
+      state.settings.show_inspector === false ? " hide-inspector" : ""
+    }`;
+    await persistSettings({ default_editor_mode: mode });
+  });
+
+  document.getElementById("setting-font-size").addEventListener("change", () => persistSettings());
+  document.getElementById("setting-show-inspector").addEventListener("change", () =>
+    persistSettings()
+  );
+  document.getElementById("setting-midweek-day").addEventListener("change", async () => {
+    await persistSettings();
+    state.reportStart = "";
+    state.reportEnd = "";
+  });
+
+  document.getElementById("btn-save-settings").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    await persistSettings();
+    const orig = btn.textContent;
+    btn.textContent = "✓ Preferences Saved";
+    setTimeout(() => (btn.textContent = orig), 1600);
+  });
+
+  document.getElementById("btn-settings-archive-demo").addEventListener("click", async () => {
+    if (
+      !confirm(
+        "Move current notes to vault/_demo_archive/ and start with a clean Daily Log for today? (Your templates/ folder will be kept, and you can restore anytime from Settings.)"
+      )
+    ) {
+      return;
+    }
+    const res = await apiPost("/api/vault/archive-demo", {});
+    if (res.ok) {
+      await refreshBootstrap();
+      renderSettingsDashboard();
+    }
+  });
+
+  document.getElementById("btn-settings-restore-demo").addEventListener("click", async () => {
+    const res = await apiPost("/api/vault/restore-demo", {});
+    if (res.ok) {
+      await refreshBootstrap();
+      renderSettingsDashboard();
+    }
+  });
+
+  document.getElementById("btn-settings-reindex").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.textContent = "Rebuilding...";
+    await apiPost("/api/reindex", {});
+    await refreshBootstrap();
+    renderSettingsDashboard();
+    btn.textContent = "✓ Index Rebuilt";
+    setTimeout(() => (btn.textContent = "↻ Rebuild Index Now"), 1600);
+  });
+
+  document.getElementById("btn-settings-export").addEventListener("click", () => {
+    window.open("/api/export", "_blank");
+  });
 
   window.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -1550,6 +1718,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
   await refreshBootstrap();
 
+  // Apply user's default editor mode on initial load
+  const defMode = state.settings.default_editor_mode || "split";
+  document.querySelectorAll(".mode-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.mode === defMode);
+  });
+  const splitContainer = document.getElementById("editor-split-container");
+  splitContainer.className = `editor-split-container mode-${defMode}${
+    state.settings.show_inspector === false ? " hide-inspector" : ""
+  }`;
+
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get("view");
   const noteParam = params.get("note");
@@ -1561,7 +1739,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     viewParam === "tasks" ||
     viewParam === "links" ||
     viewParam === "reports" ||
-    viewParam === "graph"
+    viewParam === "graph" ||
+    viewParam === "settings"
   ) {
     switchWorkspaceView(viewParam);
   } else {
