@@ -463,8 +463,11 @@
       <section class="workspace-view" id="view-graph">
         <div class="graph-container">
           <div class="graph-overlay">
-            <h2>Knowledge & Architecture Link Topology</h2>
-            <p>Interactive force-directed graph of your <code>[[WikiLinks]]</code> connecting Daily Logs, Projects, and Runbooks. Click any node to open the note.</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+              <h2 style="margin-bottom:0;">Knowledge & Architecture Link Topology</h2>
+              <button class="btn-sm" id="btn-graph-reset" style="pointer-events:auto;">⟲ Reset View</button>
+            </div>
+            <p>Drag any node to rearrange, drag background to pan, scroll to zoom, or click a node to open the note.</p>
             <div class="graph-legend">
               <span><i class="dot daily"></i> Daily Logs</span>
               <span><i class="dot projects"></i> Projects</span>
@@ -707,6 +710,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=3.4"></script>
+  <script src="/app.js?v=3.5"></script>
 </body>
 </html>

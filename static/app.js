@@ -1006,7 +1006,14 @@ async function loadReportsDashboard() {
 
 // --- View 5: Force-Directed Knowledge Topology Graph ---
 
+let graphAnimFrame = null;
+
 async function loadGraphView() {
+  if (graphAnimFrame) {
+    cancelAnimationFrame(graphAnimFrame);
+    graphAnimFrame = null;
+  }
+
   const data = await apiGet("/api/graph");
   const canvas = document.getElementById("graph-canvas");
   const ctx = canvas.getContext("2d");
@@ -1023,6 +1030,7 @@ async function loadGraphView() {
       y: canvas.height / 2 + Math.sin(angle) * radius,
       vx: 0,
       vy: 0,
+      pinned: false,
     };
   });
 
@@ -1036,9 +1044,44 @@ async function loadGraphView() {
     }))
     .filter((e) => e.source && e.target);
 
-  let ticks = 0;
-  function step() {
-    ticks++;
+  // Camera pan & zoom state
+  let panX = 0;
+  let panY = 0;
+  let scale = 1;
+
+  // Interaction state
+  let draggedNode = null;
+  let hoveredNode = null;
+  let isPanning = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let panStartX = 0;
+  let panStartY = 0;
+  let totalDragDist = 0;
+  let physicsActiveTicks = 220;
+
+  function screenToWorld(sx, sy) {
+    return {
+      x: (sx - panX) / scale,
+      y: (sy - panY) / scale,
+    };
+  }
+
+  function findNodeAtScreen(sx, sy) {
+    const w = screenToWorld(sx, sy);
+    const hitRadius = 16 / scale;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      if (Math.hypot(nodes[i].x - w.x, nodes[i].y - w.y) <= hitRadius) {
+        return nodes[i];
+      }
+    }
+    return null;
+  }
+
+  function updatePhysics() {
+    if (physicsActiveTicks <= 0 && !draggedNode) return;
+    if (!draggedNode) physicsActiveTicks--;
+
     // Repulsion
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -1048,10 +1091,14 @@ async function loadGraphView() {
         const force = 4200 / distSq;
         const fx = dx * force;
         const fy = dy * force;
-        nodes[i].vx -= fx;
-        nodes[i].vy -= fy;
-        nodes[j].vx += fx;
-        nodes[j].vy += fy;
+        if (nodes[i] !== draggedNode && !nodes[i].pinned) {
+          nodes[i].vx -= fx;
+          nodes[i].vy -= fy;
+        }
+        if (nodes[j] !== draggedNode && !nodes[j].pinned) {
+          nodes[j].vx += fx;
+          nodes[j].vy += fy;
+        }
       }
     }
 
@@ -1063,25 +1110,37 @@ async function loadGraphView() {
       const force = (dist - 150) * 0.025;
       const fx = (dx / dist) * force;
       const fy = (dy / dist) * force;
-      e.source.vx += fx;
-      e.source.vy += fy;
-      e.target.vx -= fx;
-      e.target.vy -= fy;
+      if (e.source !== draggedNode && !e.source.pinned) {
+        e.source.vx += fx;
+        e.source.vy += fy;
+      }
+      if (e.target !== draggedNode && !e.target.pinned) {
+        e.target.vx -= fx;
+        e.target.vy -= fy;
+      }
     });
 
-    // Center gravity & viewport bounds
+    // Center gravity & velocity integration
     nodes.forEach((n) => {
+      if (n === draggedNode || n.pinned) {
+        n.vx = 0;
+        n.vy = 0;
+        return;
+      }
       n.vx += (canvas.width / 2 - n.x) * 0.009;
       n.vy += (canvas.height / 2 - n.y) * 0.009;
       n.x += n.vx * 0.4;
       n.y += n.vy * 0.4;
       n.vx *= 0.75;
       n.vy *= 0.75;
-      n.x = Math.max(80, Math.min(canvas.width - 250, n.x));
-      n.y = Math.max(80, Math.min(canvas.height - 60, n.y));
+      if (!draggedNode && panX === 0 && panY === 0 && scale === 1) {
+        n.x = Math.max(80, Math.min(canvas.width - 250, n.x));
+        n.y = Math.max(80, Math.min(canvas.height - 60, n.y));
+      }
     });
+  }
 
-    // Render
+  function drawGraph() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const cs = getComputedStyle(document.documentElement);
@@ -1091,20 +1150,29 @@ async function loadGraphView() {
     const colBg = cs.getPropertyValue("--bg-root").trim() || "#050507";
     const colText = cs.getPropertyValue("--text-primary").trim() || "#f8fafc";
 
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(scale, scale);
+
+    const activeNode = draggedNode || hoveredNode;
+
     edges.forEach((e) => {
+      const isHighlighted =
+        activeNode && (e.source === activeNode || e.target === activeNode);
       ctx.beginPath();
       ctx.moveTo(e.source.x, e.source.y);
       ctx.lineTo(e.target.x, e.target.y);
       ctx.strokeStyle = colAccent;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = isHighlighted ? 0.9 : activeNode ? 0.18 : 0.38;
+      ctx.lineWidth = isHighlighted ? 2.4 : 1.5;
       ctx.stroke();
       ctx.globalAlpha = 1.0;
     });
 
     nodes.forEach((n) => {
+      const isFocus = n === activeNode;
       ctx.beginPath();
-      ctx.arc(n.x, n.y, 9, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, isFocus ? 11.5 : 9, 0, Math.PI * 2);
       ctx.fillStyle =
         n.folder === "daily"
           ? colAmber
@@ -1112,28 +1180,123 @@ async function loadGraphView() {
           ? colEmerald
           : colAccent;
       ctx.fill();
-      ctx.strokeStyle = colBg;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isFocus ? colText : colBg;
+      ctx.lineWidth = isFocus ? 2.5 : 2;
       ctx.stroke();
 
       ctx.fillStyle = colText;
-      ctx.font = "12px -apple-system, Inter, sans-serif";
-      ctx.fillText(n.title, n.x + 13, n.y + 4);
+      ctx.font = `${isFocus ? "600 13px" : "12px"} -apple-system, Inter, sans-serif`;
+      ctx.fillText(n.title, n.x + 14, n.y + 4);
     });
 
-    if (ticks < 160 && state.activeView === "graph") {
-      requestAnimationFrame(step);
+    ctx.restore();
+  }
+
+  function step() {
+    if (state.activeView !== "graph") {
+      graphAnimFrame = null;
+      return;
     }
+    updatePhysics();
+    drawGraph();
+    graphAnimFrame = requestAnimationFrame(step);
   }
   step();
 
-  canvas.onclick = (e) => {
+  canvas.style.cursor = "grab";
+
+  canvas.onmousedown = (e) => {
     const r = canvas.getBoundingClientRect();
     const mx = e.clientX - r.left;
     const my = e.clientY - r.top;
-    const hit = nodes.find((n) => Math.hypot(n.x - mx, n.y - my) < 16);
-    if (hit) openNoteByPath(hit.path);
+    dragStartX = mx;
+    dragStartY = my;
+    totalDragDist = 0;
+
+    const hit = findNodeAtScreen(mx, my);
+    if (hit) {
+      draggedNode = hit;
+      draggedNode.pinned = true;
+      physicsActiveTicks = 120;
+      canvas.style.cursor = "grabbing";
+    } else {
+      isPanning = true;
+      panStartX = panX;
+      panStartY = panY;
+      canvas.style.cursor = "grabbing";
+    }
   };
+
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+
+    if (draggedNode) {
+      totalDragDist += Math.hypot(mx - dragStartX, my - dragStartY);
+      dragStartX = mx;
+      dragStartY = my;
+      const w = screenToWorld(mx, my);
+      draggedNode.x = w.x;
+      draggedNode.y = w.y;
+      physicsActiveTicks = 90;
+      return;
+    }
+
+    if (isPanning) {
+      const dx = mx - dragStartX;
+      const dy = my - dragStartY;
+      totalDragDist = Math.hypot(dx, dy);
+      panX = panStartX + dx;
+      panY = panStartY + dy;
+      return;
+    }
+
+    const hit = findNodeAtScreen(mx, my);
+    hoveredNode = hit;
+    canvas.style.cursor = hit ? "pointer" : "grab";
+  };
+
+  const endInteraction = (e) => {
+    if (draggedNode) {
+      const clickedNode = draggedNode;
+      draggedNode = null;
+      if (totalDragDist < 5 && e && e.type === "mouseup") {
+        clickedNode.pinned = false;
+        openNoteByPath(clickedNode.path);
+        return;
+      }
+      physicsActiveTicks = 80;
+    }
+    isPanning = false;
+    canvas.style.cursor = hoveredNode ? "pointer" : "grab";
+  };
+
+  canvas.onmouseup = endInteraction;
+  canvas.onmouseleave = endInteraction;
+
+  canvas.onwheel = (e) => {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    const nextScale = Math.max(0.35, Math.min(3.0, scale * zoomFactor));
+    panX = mx - ((mx - panX) / scale) * nextScale;
+    panY = my - ((my - panY) / scale) * nextScale;
+    scale = nextScale;
+  };
+
+  const resetBtn = document.getElementById("btn-graph-reset");
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      panX = 0;
+      panY = 0;
+      scale = 1;
+      nodes.forEach((n) => (n.pinned = false));
+      physicsActiveTicks = 140;
+    };
+  }
 }
 
 // --- View 6: Settings, Themes & Vault Management ---
