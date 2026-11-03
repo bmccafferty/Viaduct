@@ -27,7 +27,7 @@ const state = {
   reportStart: "",
   reportEnd: "",
   settings: {
-    theme: "midnight",
+    theme: "obsidian",
     editor_font_size: 13.5,
     default_editor_mode: "split",
     show_inspector: true,
@@ -321,7 +321,7 @@ async function refreshBootstrap() {
 
 function applySettingsToUI() {
   const s = state.settings;
-  document.documentElement.setAttribute("data-theme", s.theme || "midnight");
+  document.documentElement.setAttribute("data-theme", s.theme || "obsidian");
 
   const editor = document.getElementById("note-editor");
   const reportEditor = document.getElementById("report-editor");
@@ -1144,7 +1144,7 @@ function renderSettingsDashboard() {
   `;
 
   document.querySelectorAll("#theme-swatches .theme-card").forEach((card) => {
-    card.classList.toggle("active", card.dataset.themeChoice === (s.theme || "midnight"));
+    card.classList.toggle("active", card.dataset.themeChoice === (s.theme || "obsidian"));
   });
 
   document.getElementById("setting-default-mode").value = s.default_editor_mode || "split";

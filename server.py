@@ -27,7 +27,7 @@ SETTINGS_PATH = INDEX_DIR / "settings.json"
 STATIC_DIR = BASE_DIR / "static"
 
 DEFAULT_SETTINGS = {
-    "theme": "midnight",
+    "theme": "obsidian",
     "editor_font_size": 13.5,
     "default_editor_mode": "split",
     "show_inspector": True,

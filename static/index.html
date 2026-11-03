@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VIADUCT // Cloud Knowledge & Operations Vault</title>
-  <link rel="stylesheet" href="/styles.css?v=3.0" />
+  <link rel="stylesheet" href="/styles.css?v=3.2" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -29,7 +29,6 @@
           </svg>
           <div class="brand-titles">
             <span class="brand-name">VIADUCT</span>
-            <span class="brand-sub">LOCAL MD ENGINE v2.4</span>
           </div>
         </div>
         <button class="icon-btn" id="btn-cmd-palette" title="Command Palette & Instant FTS5 Search (⌘K)">
@@ -446,7 +445,7 @@
                 <span class="pane-hint">Add your 1:1 talking points or edits directly</span>
               </div>
               <div class="textarea-wrapper">
-                <textarea id="report-editor" spellcheck="false" style="width:100%;height:100%;background:#090d16;color:#e2e8f0;border:none;outline:none;resize:none;padding:18px 20px;font-family:var(--font-mono);font-size:13px;line-height:1.65;"></textarea>
+                <textarea id="report-editor" spellcheck="false"></textarea>
               </div>
             </div>
             <div class="preview-pane" style="border-right:none;">
@@ -494,19 +493,7 @@
             <div class="settings-card">
               <h3>🎨 Colour Theme & Appearance</h3>
               <div class="theme-swatches" id="theme-swatches">
-                <div class="theme-card active" data-theme-choice="midnight">
-                  <div class="theme-preview-dots">
-                    <span style="background:#090d16"></span>
-                    <span style="background:#38bdf8"></span>
-                    <span style="background:#10b981"></span>
-                  </div>
-                  <div>
-                    <strong>Midnight Slate</strong>
-                    <div class="setting-sub">Default dark workbench</div>
-                  </div>
-                </div>
-
-                <div class="theme-card" data-theme-choice="obsidian">
+                <div class="theme-card active" data-theme-choice="obsidian">
                   <div class="theme-preview-dots">
                     <span style="background:#050507"></span>
                     <span style="background:#a855f7"></span>
@@ -514,7 +501,19 @@
                   </div>
                   <div>
                     <strong>Obsidian Carbon</strong>
-                    <div class="setting-sub">OLED black & violet</div>
+                    <div class="setting-sub">Default OLED black & violet</div>
+                  </div>
+                </div>
+
+                <div class="theme-card" data-theme-choice="midnight">
+                  <div class="theme-preview-dots">
+                    <span style="background:#090d16"></span>
+                    <span style="background:#38bdf8"></span>
+                    <span style="background:#10b981"></span>
+                  </div>
+                  <div>
+                    <strong>Midnight Slate</strong>
+                    <div class="setting-sub">Dark slate & cyan workbench</div>
                   </div>
                 </div>
 
@@ -708,6 +707,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=3.0"></script>
+  <script src="/app.js?v=3.2"></script>
 </body>
 </html>
