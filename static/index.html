@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VIADUCT // Cloud Knowledge & Operations Vault</title>
-  <link rel="stylesheet" href="/styles.css?v=2.5" />
+  <link rel="stylesheet" href="/styles.css?v=2.7" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -422,24 +422,21 @@
 
           <div class="filter-bar" style="flex-shrink:0;">
             <div class="filter-tabs" id="report-mode-tabs">
-              <button class="filter-tab active" data-mode="121">🤝 Wednesday Manager 1:1 Doc</button>
-              <button class="filter-tab" data-mode="friday">📋 Friday "What I Did" Wrap-Up</button>
+              <button class="filter-tab active" data-mode="121">🤝 Mid Week Review</button>
+              <button class="filter-tab" data-mode="friday">📋 End of Week Review</button>
             </div>
 
-            <div class="filter-controls" style="align-items:center;">
-              <button class="btn-sm" id="btn-preset-7d">Last 7 Days</button>
-              <button class="btn-sm" id="btn-preset-week">This Week (Mon–Fri)</button>
-              <button class="btn-sm" id="btn-preset-14d">Last 14 Days</button>
+            <div class="filter-controls" style="align-items:center;white-space:nowrap;">
               <span class="pane-hint">From:</span>
               <input type="date" id="report-start-date" class="date-input" />
               <span class="pane-hint">To:</span>
               <input type="date" id="report-end-date" class="date-input" />
               <button class="action-btn" id="btn-copy-report">📋 Copy Markdown</button>
-              <button class="action-btn primary" id="btn-save-report">💾 Save as .md Note in Vault</button>
+              <button class="action-btn primary" id="btn-save-report">💾 Save to Vault</button>
             </div>
           </div>
 
-          <div class="editor-split-container mode-split" style="flex:1;grid-template-columns:1fr 1fr;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;">
+          <div id="report-split-container" class="editor-split-container report-split-container mode-split" style="flex:1;overflow:hidden;">
             <div class="editor-pane">
               <div class="pane-Subheader">
                 <span>GENERATED MARKDOWN (EDITABLE BEFORE COPY OR SAVE)</span>
@@ -520,6 +517,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=2.5"></script>
+  <script src="/app.js?v=2.7"></script>
 </body>
 </html>

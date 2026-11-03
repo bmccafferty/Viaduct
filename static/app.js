@@ -379,20 +379,23 @@ function switchWorkspaceView(viewName) {
     editorView.classList.add("active");
     modeGroup.classList.remove("hidden");
   } else {
-    modeGroup.classList.add("hidden");
     if (viewName === "tasks") {
+      modeGroup.classList.add("hidden");
       tasksView.classList.add("active");
       document.getElementById("topbar-title").textContent = "Centralized Task Sheet";
       loadTasksDashboard();
     } else if (viewName === "links") {
+      modeGroup.classList.add("hidden");
       linksView.classList.add("active");
       document.getElementById("topbar-title").textContent = "URL & Bookmark Registry";
       loadLinksDashboard();
     } else if (viewName === "reports") {
+      modeGroup.classList.remove("hidden");
       reportsView.classList.add("active");
       document.getElementById("topbar-title").textContent = "1:1 & Weekly Digest";
       loadReportsDashboard();
     } else if (viewName === "graph") {
+      modeGroup.classList.add("hidden");
       graphView.classList.add("active");
       document.getElementById("topbar-title").textContent = "Knowledge Topology Graph";
       loadGraphView();
@@ -877,6 +880,40 @@ function renderLinksDashboard() {
 
 // --- View 4: 1:1 Sync & Weekly Wrap-Up Generator ---
 
+function setMidWeekReviewDates() {
+  // 7 days: Last Wednesday to This Wednesday
+  const now = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
+  const day = now.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const diffToWed = day === 0 ? -4 : 3 - day;
+  const thisWed = new Date(now);
+  thisWed.setDate(now.getDate() + diffToWed);
+
+  const lastWed = new Date(thisWed);
+  lastWed.setDate(thisWed.getDate() - 7);
+
+  state.reportStart = lastWed.toISOString().slice(0, 10);
+  state.reportEnd = thisWed.toISOString().slice(0, 10);
+  document.getElementById("report-start-date").value = state.reportStart;
+  document.getElementById("report-end-date").value = state.reportEnd;
+}
+
+function setEndOfWeekReviewDates() {
+  // Monday to Friday of current week
+  const now = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
+  const day = now.getDay(); // 0=Sun, 1=Mon...
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diffToMon);
+
+  const fri = new Date(mon);
+  fri.setDate(mon.getDate() + 4);
+
+  state.reportStart = mon.toISOString().slice(0, 10);
+  state.reportEnd = fri.toISOString().slice(0, 10);
+  document.getElementById("report-start-date").value = state.reportStart;
+  document.getElementById("report-end-date").value = state.reportEnd;
+}
+
 function setReportPresetDays(daysBack) {
   const endDt = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
   const startDt = new Date(endDt);
@@ -889,7 +926,11 @@ function setReportPresetDays(daysBack) {
 
 async function loadReportsDashboard() {
   if (!state.reportStart || !state.reportEnd) {
-    setReportPresetDays(6);
+    if (state.reportMode === "121") {
+      setMidWeekReviewDates();
+    } else {
+      setEndOfWeekReviewDates();
+    }
   }
   const qs = `mode=${encodeURIComponent(state.reportMode)}&start=${encodeURIComponent(
     state.reportStart
@@ -900,7 +941,7 @@ async function loadReportsDashboard() {
   document.getElementById("report-kpis").innerHTML = `
     <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-emerald)">${
       stats.completed_count || 0
-    }</div><div class="kpi-label">Shipped [x]</div></div>
+    }</div><div class="kpi-label">Completed [x]</div></div>
     <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-amber)">${
       stats.in_progress_count || 0
     }</div><div class="kpi-label">In Progress [/]</div></div>
@@ -1211,6 +1252,10 @@ function bindEvents() {
       btn.classList.add("active");
       const container = document.getElementById("editor-split-container");
       container.className = `editor-split-container mode-${btn.dataset.mode}`;
+      const reportContainer = document.getElementById("report-split-container");
+      if (reportContainer) {
+        reportContainer.className = `editor-split-container report-split-container mode-${btn.dataset.mode}`;
+      }
     });
   });
 
@@ -1399,31 +1444,13 @@ function bindEvents() {
         .forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
       state.reportMode = tab.dataset.mode;
+      if (state.reportMode === "121") {
+        setMidWeekReviewDates();
+      } else {
+        setEndOfWeekReviewDates();
+      }
       loadReportsDashboard();
     });
-  });
-
-  document.getElementById("btn-preset-7d").addEventListener("click", () => {
-    setReportPresetDays(6);
-    loadReportsDashboard();
-  });
-
-  document.getElementById("btn-preset-14d").addEventListener("click", () => {
-    setReportPresetDays(13);
-    loadReportsDashboard();
-  });
-
-  document.getElementById("btn-preset-week").addEventListener("click", () => {
-    const now = new Date((state.today || new Date().toISOString().slice(0, 10)) + "T12:00:00");
-    const day = now.getDay(); // 0=Sun, 1=Mon...
-    const diffToMon = day === 0 ? 6 : day - 1;
-    const mon = new Date(now);
-    mon.setDate(now.getDate() - diffToMon);
-    state.reportStart = mon.toISOString().slice(0, 10);
-    state.reportEnd = now.toISOString().slice(0, 10);
-    document.getElementById("report-start-date").value = state.reportStart;
-    document.getElementById("report-end-date").value = state.reportEnd;
-    loadReportsDashboard();
   });
 
   document.getElementById("report-start-date").addEventListener("change", (e) => {
@@ -1451,7 +1478,7 @@ function bindEvents() {
 
   document.getElementById("btn-save-report").addEventListener("click", async () => {
     const mdBody = document.getElementById("report-editor").value;
-    const label = state.reportMode === "121" ? "1-1 Sync" : "Weekly Wrap-Up";
+    const label = state.reportMode === "121" ? "Mid Week Review" : "End of Week Review";
     const fileTitle = `${state.reportEnd} ${label}`;
     const relPath = `reports/${fileTitle}.md`;
     const fullContent = `---\ntitle: "${fileTitle}"\ntype: report\nstatus: ${state.reportMode}\ntags: [report, ${state.reportMode}]\n---\n\n${mdBody}`;

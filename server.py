@@ -1572,9 +1572,9 @@ tags: [notes]
         # Build Markdown Document
         md = []
         if mode == "121":
-            md.append(f"# 🤝 Manager 1:1 Sync & Status ({start_date} → {end_date})")
+            md.append(f"# 🤝 Mid Week Review ({start_date} → {end_date})")
             md.append("")
-            md.append("## 🏆 Key Wins & Shipped Deliverables")
+            md.append("## 🏆 Key Wins & Completed Deliverables")
             if completed_tasks:
                 for t in completed_tasks:
                     md.append(f"- ✅ {t['clean_text']} *(from `{t['source_title']}`)*")
@@ -1605,7 +1605,7 @@ tags: [notes]
             md.append("- **Team / Resourcing**: ")
 
             md.append("")
-            md.append("## 🛠 Engineering Work Log Highlights")
+            md.append("## 🛠 Daily Work Log Highlights")
             if work_logs_by_day:
                 for day in work_logs_by_day:
                     md.append(f"### 📅 {day['date']}")
@@ -1615,8 +1615,8 @@ tags: [notes]
                 md.append("- *No daily work log bullets in this period.*")
 
         else:
-            # Friday "What I Have Done" Weekly Wrap-Up
-            md.append(f"# 📋 Weekly Wrap-Up: What I Did ({start_date} → {end_date})")
+            # End of Week Review (Mon - Fri)
+            md.append(f"# 📋 End of Week Review ({start_date} → {end_date})")
             md.append("")
             md.append(f"**Summary**: Completed **{len(completed_tasks)}** tasks, progressed **{len(in_progress_tasks)}** active workstreams, and logged **{len(period_links)}** technical references across **{len(daily_rows)}** daily logs.")
             md.append("")

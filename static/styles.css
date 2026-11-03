@@ -573,6 +573,21 @@ html, body {
   display: none;
 }
 
+/* 2-pane report split container (no 3rd inspector column) */
+.report-split-container {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+.report-split-container.mode-split {
+  grid-template-columns: 1fr 1fr;
+}
+.report-split-container.mode-edit {
+  grid-template-columns: 1fr;
+}
+.report-split-container.mode-preview {
+  grid-template-columns: 1fr;
+}
+
 .editor-pane, .preview-pane {
   display: flex;
   flex-direction: column;
