@@ -1069,26 +1069,37 @@ async function loadGraphView() {
       e.target.vy -= fy;
     });
 
-    // Center gravity
+    // Center gravity & viewport bounds
     nodes.forEach((n) => {
-      n.vx += (canvas.width / 2 - n.x) * 0.005;
-      n.vy += (canvas.height / 2 - n.y) * 0.005;
+      n.vx += (canvas.width / 2 - n.x) * 0.009;
+      n.vy += (canvas.height / 2 - n.y) * 0.009;
       n.x += n.vx * 0.4;
       n.y += n.vy * 0.4;
       n.vx *= 0.75;
       n.vy *= 0.75;
+      n.x = Math.max(80, Math.min(canvas.width - 250, n.x));
+      n.y = Math.max(80, Math.min(canvas.height - 60, n.y));
     });
 
     // Render
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const cs = getComputedStyle(document.documentElement);
+    const colAccent = cs.getPropertyValue("--accent-cyan").trim() || "#c084fc";
+    const colAmber = cs.getPropertyValue("--accent-amber").trim() || "#fbbf24";
+    const colEmerald = cs.getPropertyValue("--accent-emerald").trim() || "#34d399";
+    const colBg = cs.getPropertyValue("--bg-root").trim() || "#050507";
+    const colText = cs.getPropertyValue("--text-primary").trim() || "#f8fafc";
+
     edges.forEach((e) => {
       ctx.beginPath();
       ctx.moveTo(e.source.x, e.source.y);
       ctx.lineTo(e.target.x, e.target.y);
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.strokeStyle = colAccent;
+      ctx.globalAlpha = 0.35;
       ctx.lineWidth = 1.5;
       ctx.stroke();
+      ctx.globalAlpha = 1.0;
     });
 
     nodes.forEach((n) => {
@@ -1096,16 +1107,16 @@ async function loadGraphView() {
       ctx.arc(n.x, n.y, 9, 0, Math.PI * 2);
       ctx.fillStyle =
         n.folder === "daily"
-          ? "#f59e0b"
+          ? colAmber
           : n.folder === "kb"
-          ? "#10b981"
-          : "#38bdf8";
+          ? colEmerald
+          : colAccent;
       ctx.fill();
-      ctx.strokeStyle = "#090d16";
+      ctx.strokeStyle = colBg;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = "#e2e8f0";
+      ctx.fillStyle = colText;
       ctx.font = "12px -apple-system, Inter, sans-serif";
       ctx.fillText(n.title, n.x + 13, n.y + 4);
     });
